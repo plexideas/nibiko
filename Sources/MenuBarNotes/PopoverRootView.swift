@@ -19,40 +19,38 @@ struct PopoverRootView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 10) {
-                    header
+            VStack(alignment: .leading, spacing: 10) {
+                header
 
-                    ForEach(visibleCards) { card in
-                        if card == .notes {
-                            NotesTodosCard(
-                                recordListStore: recordListStore,
-                                reminderNotificationStore: reminderNotificationStore,
-                                captureService: captureService,
-                                localizer: localizer,
-                                draftTitle: $draftTitle,
-                                draftKind: $draftKind,
-                                draftReminderAt: $draftReminderAt,
-                                addError: $addError
-                            )
-                        } else if card == .pomodoro {
-                            PomodoroCard(
-                                settingsStore: settingsStore,
-                                pomodoroTimer: pomodoroTimer,
-                                localizer: localizer
-                            )
-                        } else {
-                            CalendarCard(
-                                settingsStore: settingsStore,
-                                calendarEventsStore: calendarEventsStore,
-                                localizer: localizer
-                            )
-                        }
+                ForEach(visibleCards) { card in
+                    if card == .notes {
+                        NotesTodosCard(
+                            recordListStore: recordListStore,
+                            reminderNotificationStore: reminderNotificationStore,
+                            captureService: captureService,
+                            localizer: localizer,
+                            draftTitle: $draftTitle,
+                            draftKind: $draftKind,
+                            draftReminderAt: $draftReminderAt,
+                            addError: $addError
+                        )
+                    } else if card == .pomodoro {
+                        PomodoroCard(
+                            settingsStore: settingsStore,
+                            pomodoroTimer: pomodoroTimer,
+                            localizer: localizer
+                        )
+                    } else {
+                        CalendarCard(
+                            settingsStore: settingsStore,
+                            calendarEventsStore: calendarEventsStore,
+                            localizer: localizer
+                        )
                     }
                 }
-                .padding(12)
             }
-            .frame(maxHeight: 420)
+            .padding(12)
+            .frame(maxHeight: .infinity, alignment: .top)
 
             Divider()
 
@@ -65,7 +63,7 @@ struct PopoverRootView: View {
             .font(.system(size: 12))
             .padding(12)
         }
-        .frame(width: 340)
+        .frame(width: 340, height: 540)
     }
 
     private var header: some View {
@@ -116,6 +114,9 @@ private struct NotesTodosCard: View {
     @Binding var draftReminderAt: Date
     @Binding var addError: String?
     @FocusState private var isDraftFocused: Bool
+    private let maximumVisibleRows = 5
+    private let recordRowHeight: CGFloat = 34
+    private let recordRowSpacing: CGFloat = 6
 
     private var displayedRecords: [Record] {
         RecordDisplaySupport.recordsForDisplay(
@@ -149,13 +150,18 @@ private struct NotesTodosCard: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
             } else {
-                VStack(spacing: 6) {
-                    ForEach(displayedRecords) { record in
-                        RecordRow(record: record, localizer: localizer) {
-                            try? recordListStore.completeRecord(id: record.id)
+                ScrollView {
+                    LazyVStack(spacing: recordRowSpacing) {
+                        ForEach(displayedRecords) { record in
+                            RecordRow(record: record, localizer: localizer) {
+                                try? recordListStore.completeRecord(id: record.id)
+                            }
+                            .frame(minHeight: recordRowHeight)
                         }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .frame(maxHeight: recordListHeight)
             }
 
             Divider()
@@ -210,6 +216,16 @@ private struct NotesTodosCard: View {
         .onAppear {
             isDraftFocused = true
         }
+    }
+
+    private var recordListHeight: CGFloat {
+        cappedListHeight(count: displayedRecords.count, rowHeight: recordRowHeight, spacing: recordRowSpacing)
+    }
+
+    private func cappedListHeight(count: Int, rowHeight: CGFloat, spacing: CGFloat) -> CGFloat {
+        let visibleRows = min(count, maximumVisibleRows)
+        let visibleGaps = max(visibleRows - 1, 0)
+        return CGFloat(visibleRows) * rowHeight + CGFloat(visibleGaps) * spacing
     }
 
     private var emptyText: String {
@@ -448,6 +464,9 @@ private struct CalendarCard: View {
     @ObservedObject var settingsStore: AppSettingsStore
     @ObservedObject var calendarEventsStore: CalendarEventsStore
     let localizer: Localizer
+    private let maximumVisibleRows = 5
+    private let eventRowHeight: CGFloat = 34
+    private let eventRowSpacing: CGFloat = 6
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -492,13 +511,28 @@ private struct CalendarCard: View {
             } else if calendarEventsStore.events.isEmpty {
                 statusText(localizer.string(.calendarNoEvents))
             } else {
-                VStack(spacing: 6) {
-                    ForEach(calendarEventsStore.events) { event in
-                        CalendarEventRow(event: event, localizer: localizer)
+                ScrollView {
+                    LazyVStack(spacing: eventRowSpacing) {
+                        ForEach(calendarEventsStore.events) { event in
+                            CalendarEventRow(event: event, localizer: localizer)
+                                .frame(minHeight: eventRowHeight)
+                        }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .frame(maxHeight: eventListHeight)
             }
         }
+    }
+
+    private var eventListHeight: CGFloat {
+        cappedListHeight(count: calendarEventsStore.events.count, rowHeight: eventRowHeight, spacing: eventRowSpacing)
+    }
+
+    private func cappedListHeight(count: Int, rowHeight: CGFloat, spacing: CGFloat) -> CGFloat {
+        let visibleRows = min(count, maximumVisibleRows)
+        let visibleGaps = max(visibleRows - 1, 0)
+        return CGFloat(visibleRows) * rowHeight + CGFloat(visibleGaps) * spacing
     }
 
     private func statusText(_ text: String) -> some View {
