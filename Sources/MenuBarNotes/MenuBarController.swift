@@ -17,7 +17,6 @@ final class MenuBarController: NSObject {
     private let popover = NSPopover()
     private let popoverWidth: CGFloat = 340
     private let maximumPopoverScreenHeightRatio: CGFloat = 2.0 / 3.0
-    private var currentMaximumPopoverHeight: CGFloat = 480
     private var hostingController: NSHostingController<PopoverRootView>?
 
     init(
@@ -69,13 +68,9 @@ final class MenuBarController: NSObject {
                 showAppInfo: { [weak self] in
                     self?.popover.performClose(nil)
                     self?.showAppInfo()
-                },
-                onContentSizeChange: { [weak self] size in
-                    self?.resizePopover(toContentSize: size)
                 }
             )
         )
-        hostingController.sizingOptions = [.preferredContentSize]
         self.hostingController = hostingController
         popover.contentViewController = hostingController
     }
@@ -103,30 +98,12 @@ final class MenuBarController: NSObject {
             return
         }
 
-        let fittingHeight = fittingContentHeight(for: hostingController.view)
-        currentMaximumPopoverHeight = maximumPopoverHeight(relativeTo: button)
-        resizePopover(toContentSize: NSSize(width: popoverWidth, height: fittingHeight))
-    }
-
-    private func resizePopover(toContentSize contentSize: CGSize) {
-        guard contentSize.height > 0 else {
-            return
-        }
-
-        let height = min(contentSize.height, currentMaximumPopoverHeight)
-        let nextSize = NSSize(width: popoverWidth, height: ceil(height))
-        guard abs(popover.contentSize.height - nextSize.height) > 0.5 else {
-            return
-        }
-
-        popover.contentSize = nextSize
-    }
-
-    private func fittingContentHeight(for view: NSView) -> CGFloat {
-        view.frame.size = NSSize(width: popoverWidth, height: 0)
-        view.needsLayout = true
-        view.layoutSubtreeIfNeeded()
-        return max(view.fittingSize.height, 1)
+        let maximumHeight = maximumPopoverHeight(relativeTo: button)
+        let fittingSize = hostingController.sizeThatFits(
+            in: NSSize(width: popoverWidth, height: maximumHeight)
+        )
+        let height = min(max(fittingSize.height, 1), maximumHeight)
+        popover.contentSize = NSSize(width: popoverWidth, height: ceil(height))
     }
 
     private func maximumPopoverHeight(relativeTo button: NSStatusBarButton) -> CGFloat {

@@ -16,7 +16,6 @@ struct PopoverRootView: View {
     let localizer: Localizer
     let showSettings: () -> Void
     let showAppInfo: () -> Void
-    let onContentSizeChange: (CGSize) -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -65,12 +64,6 @@ struct PopoverRootView: View {
             .padding(12)
         }
         .frame(width: 340)
-        .background {
-            GeometryReader { proxy in
-                Color.clear.preference(key: PopoverContentSizePreferenceKey.self, value: proxy.size)
-            }
-        }
-        .onPreferenceChange(PopoverContentSizePreferenceKey.self, perform: onContentSizeChange)
     }
 
     private var header: some View {
@@ -108,14 +101,6 @@ struct PopoverRootView: View {
 
     private var visibleCards: [MenuCard] {
         MenuCardVisibility.visibleCards(from: settingsStore.settings)
-    }
-}
-
-private struct PopoverContentSizePreferenceKey: PreferenceKey {
-    static let defaultValue: CGSize = .zero
-
-    static func reduce(value: inout CGSize, nextValue: () -> CGSize) {
-        value = nextValue()
     }
 }
 
