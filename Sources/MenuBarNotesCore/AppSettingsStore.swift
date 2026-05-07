@@ -1,0 +1,100 @@
+import Combine
+import Foundation
+
+public protocol SettingsPersistence {
+    func loadSettings() throws -> AppSettings?
+    func saveSettings(_ settings: AppSettings) throws
+}
+
+public struct UserDefaultsSettingsPersistence: SettingsPersistence {
+    private let defaults: UserDefaults
+    private let key: String
+
+    public init(defaults: UserDefaults = .standard, key: String = "menuBarNotes.settings.v1") {
+        self.defaults = defaults
+        self.key = key
+    }
+
+    public func loadSettings() throws -> AppSettings? {
+        guard let data = defaults.data(forKey: key) else {
+            return nil
+        }
+
+        return try JSONDecoder().decode(AppSettings.self, from: data)
+    }
+
+    public func saveSettings(_ settings: AppSettings) throws {
+        let data = try JSONEncoder().encode(settings)
+        defaults.set(data, forKey: key)
+    }
+}
+
+@MainActor
+public final class AppSettingsStore: ObservableObject {
+    @Published public private(set) var settings: AppSettings
+
+    private let persistence: SettingsPersistence
+    private let errorHandler: @MainActor (Error) -> Void
+
+    public init(
+        persistence: SettingsPersistence = UserDefaultsSettingsPersistence(),
+        errorHandler: @escaping @MainActor (Error) -> Void = { _ in }
+    ) {
+        self.persistence = persistence
+        self.errorHandler = errorHandler
+
+        do {
+            self.settings = try persistence.loadSettings() ?? .default
+        } catch {
+            self.settings = .default
+            errorHandler(error)
+        }
+    }
+
+    public func setAppearanceMode(_ appearanceMode: AppearanceMode) {
+        update { settings in
+            settings.appearanceMode = appearanceMode
+        }
+    }
+
+    public func moveCard(_ card: MenuCard, direction: CardMoveDirection) {
+        update { settings in
+            guard let index = settings.cardOrder.firstIndex(of: card) else {
+                settings.cardOrder = MenuCard.normalizedOrder(from: settings.cardOrder)
+                return
+            }
+
+            let destination: Int
+            switch direction {
+            case .up:
+                destination = settings.cardOrder.index(before: index)
+            case .down:
+                destination = settings.cardOrder.index(after: index)
+            }
+
+            guard settings.cardOrder.indices.contains(destination) else {
+                return
+            }
+
+            settings.cardOrder.swapAt(index, destination)
+        }
+    }
+
+    private func update(_ mutation: (inout AppSettings) -> Void) {
+        var nextSettings = settings
+        mutation(&nextSettings)
+        nextSettings.cardOrder = MenuCard.normalizedOrder(from: nextSettings.cardOrder)
+        settings = nextSettings
+
+        do {
+            try persistence.saveSettings(nextSettings)
+        } catch {
+            errorHandler(error)
+        }
+    }
+}
+
+public enum CardMoveDirection: Sendable {
+    case up
+    case down
+}
