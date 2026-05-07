@@ -495,34 +495,40 @@ private struct PomodoroCard: View {
 
                 HStack(spacing: 6) {
                     if pomodoroTimer.canStart {
-                        Button(action: start) {
-                            Image(systemName: "play.fill")
-                        }
-                        .help(localizer.string(.pomodoroStart))
+                        PomodoroControlButton(
+                            systemName: "play.fill",
+                            helpText: localizer.string(.pomodoroStart),
+                            prominence: .primary,
+                            action: start
+                        )
                     }
 
                     if pomodoroTimer.canPause {
-                        Button(action: pomodoroTimer.pause) {
-                            Image(systemName: "pause.fill")
-                        }
-                        .help(localizer.string(.pomodoroPause))
+                        PomodoroControlButton(
+                            systemName: "pause.fill",
+                            helpText: localizer.string(.pomodoroPause),
+                            prominence: .primary,
+                            action: pomodoroTimer.pause
+                        )
                     }
 
                     if pomodoroTimer.canResume {
-                        Button(action: pomodoroTimer.resume) {
-                            Image(systemName: "play.fill")
-                        }
-                        .help(localizer.string(.pomodoroResume))
+                        PomodoroControlButton(
+                            systemName: "play.fill",
+                            helpText: localizer.string(.pomodoroResume),
+                            prominence: .primary,
+                            action: pomodoroTimer.resume
+                        )
                     }
 
-                    Button(action: pomodoroTimer.stop) {
-                        Image(systemName: "stop.fill")
-                    }
-                    .help(localizer.string(.pomodoroStop))
+                    PomodoroControlButton(
+                        systemName: "stop.fill",
+                        helpText: localizer.string(.pomodoroStop),
+                        prominence: .destructive,
+                        action: pomodoroTimer.stop
+                    )
                     .disabled(pomodoroTimer.session.state == .idle)
                 }
-                .buttonStyle(.borderless)
-                .controlSize(.small)
             }
         }
         .padding(10)
@@ -570,6 +576,77 @@ private struct PomodoroCard: View {
 
     private func start() {
         pomodoroTimer.start(template: selectedTemplate)
+    }
+}
+
+private enum PomodoroControlButtonProminence {
+    case primary
+    case destructive
+}
+
+private struct PomodoroControlButton: View {
+    @Environment(\.isEnabled) private var isEnabled
+    @State private var isHovered = false
+
+    let systemName: String
+    let helpText: String
+    let prominence: PomodoroControlButtonProminence
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(iconColor)
+                .frame(width: 32, height: 32)
+                .background(Circle().fill(backgroundColor))
+                .overlay(Circle().strokeBorder(borderColor, lineWidth: 1))
+                .shadow(color: shadowColor, radius: isHovered && isEnabled ? 4 : 0, y: 1)
+                .scaleEffect(isHovered && isEnabled ? 1.04 : 1)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .help(helpText)
+        .accessibilityLabel(Text(helpText))
+        .onHover { isHovered = $0 }
+        .animation(.easeInOut(duration: 0.12), value: isHovered)
+        .animation(.easeInOut(duration: 0.12), value: isEnabled)
+    }
+
+    private var backgroundColor: Color {
+        switch prominence {
+        case .primary:
+            return Color.accentColor.opacity(isEnabled ? 0.92 : 0.22)
+        case .destructive:
+            return Color.red.opacity(isEnabled ? 0.88 : 0.05)
+        }
+    }
+
+    private var iconColor: Color {
+        switch prominence {
+        case .primary:
+            return Color.white.opacity(isEnabled ? 0.96 : 0.45)
+        case .destructive:
+            return isEnabled ? Color.white.opacity(0.96) : Color.secondary.opacity(0.45)
+        }
+    }
+
+    private var borderColor: Color {
+        switch prominence {
+        case .primary:
+            return Color.white.opacity(isEnabled ? 0.20 : 0.08)
+        case .destructive:
+            return isEnabled ? Color.white.opacity(0.22) : Color.primary.opacity(0.06)
+        }
+    }
+
+    private var shadowColor: Color {
+        switch prominence {
+        case .primary:
+            return Color.accentColor.opacity(0.28)
+        case .destructive:
+            return Color.red.opacity(0.24)
+        }
     }
 }
 
