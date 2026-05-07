@@ -72,6 +72,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         recordsSubscription = recordListStore.$records.sink { [weak self] records in
             self?.menuBarController.updateActiveCount(ActiveRecordCounter.count(records))
+            Task { @MainActor [weak self] in
+                await Task.yield()
+                self?.menuBarController.refreshPopoverSizeIfShown()
+            }
         }
 
         pomodoroSessionSubscription = pomodoroTimer.$session
@@ -136,10 +140,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func markdownStorageURL(from settings: AppSettings) -> URL? {
-        guard let path = settings.markdownStorageDirectory else {
-            return nil
-        }
-
+        let path = settings.markdownStorageDirectory ?? AppSettings.defaultMarkdownStorageDirectory
         return URL(fileURLWithPath: path, isDirectory: true)
     }
 

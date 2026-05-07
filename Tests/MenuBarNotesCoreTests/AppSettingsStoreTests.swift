@@ -12,6 +12,7 @@ struct AppSettingsStoreTests {
 
         #expect(store.settings.appearanceMode == .system)
         #expect(store.settings.cardOrder == [.notes, .pomodoro, .calendar])
+        #expect(store.settings.markdownStorageDirectory == AppSettings.defaultMarkdownStorageDirectory)
         #expect(store.settings.quickAddHotkey == .default)
         #expect(store.settings.isPomodoroCardVisible)
         #expect(store.settings.pomodoroTemplates == PomodoroTemplate.defaultTemplates)
@@ -58,6 +59,20 @@ struct AppSettingsStoreTests {
 
         let reloadedStore = AppSettingsStore(persistence: persistence)
         #expect(reloadedStore.settings.markdownStorageDirectory == "/tmp/MenuBarNotesRecords")
+    }
+
+    @Test("missing Markdown storage directory uses the default Documents Notes folder")
+    func defaultsMissingMarkdownStorageDirectory() throws {
+        let data = """
+        {
+          "appearanceMode": "dark",
+          "cardOrder": ["notes", "pomodoro", "calendar"]
+        }
+        """.data(using: .utf8)!
+
+        let settings = try JSONDecoder().decode(AppSettings.self, from: data)
+
+        #expect(settings.markdownStorageDirectory == AppSettings.defaultMarkdownStorageDirectory)
     }
 
     @Test("quick-add hotkey changes persist across store recreation")

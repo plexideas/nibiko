@@ -16,6 +16,7 @@ struct PopoverRootView: View {
     let localizer: Localizer
     let showSettings: () -> Void
     let requestQuit: () -> Void
+    let requestContentResize: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -32,7 +33,8 @@ struct PopoverRootView: View {
                             draftTitle: $draftTitle,
                             draftKind: $draftKind,
                             draftReminderAt: $draftReminderAt,
-                            addError: $addError
+                            addError: $addError,
+                            requestContentResize: requestContentResize
                         )
                     } else if card == .pomodoro {
                         PomodoroCard(
@@ -113,21 +115,41 @@ private struct NotesTodosCard: View {
     @Binding var draftKind: RecordKind
     @Binding var draftReminderAt: Date
     @Binding var addError: String?
+    @State private var recordDisplayMode: RecordDisplayMode = .active
+    let requestContentResize: () -> Void
     @FocusState private var isDraftFocused: Bool
     private let maximumVisibleRows = 5
-    private let recordRowHeight: CGFloat = 24
+    private let compactRecordRowHeight: CGFloat = 24
+    private let detailedRecordRowHeight: CGFloat = 38
     private let recordRowSpacing: CGFloat = 3
+    private let reminderDraftListHeightAllowance: CGFloat = 32
+    private let minimumScrollableRecordListHeight: CGFloat = 96
 
     private var displayedRecords: [Record] {
-        RecordDisplaySupport.recordsForDisplay(
-            recordListStore.records.filter { $0.kind == .note || $0.kind == .todo || $0.kind == .reminder }
-        )
+        switch recordDisplayMode {
+        case .active:
+            return RecordDisplaySupport.activeRecordsForDisplay(allDisplayableRecords)
+        case .history:
+            return RecordDisplaySupport.historyRecordsForDisplay(allDisplayableRecords)
+        }
+    }
+
+    private var allDisplayableRecords: [Record] {
+        recordListStore.records.filter { $0.kind == .note || $0.kind == .todo || $0.kind == .reminder }
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(localizer.string(.notesCardTitle))
                 .font(.system(size: 12, weight: .semibold))
+
+            Picker("", selection: $recordDisplayMode) {
+                Text(localizer.string(.activeRecordsMode)).tag(RecordDisplayMode.active)
+                Text(localizer.string(.historyRecordsMode)).tag(RecordDisplayMode.history)
+            }
+            .labelsHidden()
+            .pickerStyle(.segmented)
+            .controlSize(.small)
 
             if let notificationStatusText {
                 Text(notificationStatusText)
@@ -137,30 +159,13 @@ private struct NotesTodosCard: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            if recordListStore.lastErrorDescription != nil {
-                Text(localizer.string(.recordAddError))
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-            } else if displayedRecords.isEmpty {
-                Text(emptyText)
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            } else if displayedRecords.count > maximumVisibleRows {
-                ScrollView {
-                    recordRows
-                }
-                .frame(height: recordListHeight)
-            } else {
-                recordRows
-            }
+            recordListContent
+                .frame(height: recordListHeight, alignment: .top)
+                .animation(.easeInOut(duration: 0.16), value: recordListHeight)
 
             Divider()
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 10) {
                 Picker("", selection: $draftKind) {
                     Text(localizer.string(.todoKind)).tag(RecordKind.todo)
                     Text(localizer.string(.noteKind)).tag(RecordKind.note)
@@ -170,7 +175,7 @@ private struct NotesTodosCard: View {
                 .pickerStyle(.segmented)
                 .controlSize(.small)
 
-                if draftKind == .reminder {
+                if isReminderDraft {
                     DatePicker(
                         localizer.string(.reminderTimeLabel),
                         selection: $draftReminderAt,
@@ -178,6 +183,7 @@ private struct NotesTodosCard: View {
                     )
                     .font(.system(size: 11))
                     .controlSize(.small)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
                 }
 
                 HStack(spacing: 6) {
@@ -202,46 +208,123 @@ private struct NotesTodosCard: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
+                        .transition(.opacity)
                 }
             }
+            .animation(.easeInOut(duration: 0.16), value: isReminderDraft)
+            .animation(.easeInOut(duration: 0.16), value: addError)
         }
         .padding(10)
         .background(.quaternary.opacity(0.55), in: RoundedRectangle(cornerRadius: 8))
         .onAppear {
             isDraftFocused = true
         }
+        .onChange(of: draftKind) { _, _ in
+            requestContentResizeAfterLayout()
+        }
+        .onChange(of: recordDisplayMode) { _, _ in
+            requestContentResizeAfterLayout()
+        }
+        .onChange(of: reminderNotificationStore.status) { _, _ in
+            requestContentResizeAfterLayout()
+        }
+        .onChange(of: addError) { _, _ in
+            requestContentResizeAfterLayout()
+        }
+        .onChange(of: recordListStore.lastErrorDescription) { _, _ in
+            requestContentResizeAfterLayout()
+        }
     }
 
     private var recordListHeight: CGFloat {
-        cappedListHeight(count: displayedRecords.count, rowHeight: recordRowHeight, spacing: recordRowSpacing)
+        let stableListHeight = cappedListHeight(
+            rowHeights: Array(repeating: detailedRecordRowHeight, count: maximumVisibleRows),
+            spacing: recordRowSpacing
+        )
+        guard isReminderDraft else {
+            return stableListHeight
+        }
+
+        return max(stableListHeight - reminderDraftListHeightAllowance, minimumScrollableRecordListHeight)
+    }
+
+    @ViewBuilder
+    private var recordListContent: some View {
+        if recordListStore.lastErrorDescription != nil {
+            Text(localizer.string(.recordAddError))
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        } else if displayedRecords.isEmpty {
+            Text(emptyText)
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            ScrollView(.vertical, showsIndicators: false) {
+                recordRows
+            }
+        }
     }
 
     private var recordRows: some View {
         VStack(spacing: recordRowSpacing) {
             ForEach(displayedRecords) { record in
-                RecordRow(record: record, localizer: localizer) {
-                    try? recordListStore.completeRecord(id: record.id)
-                }
-                .frame(minHeight: recordRowHeight)
+                RecordRow(
+                    record: record,
+                    localizer: localizer,
+                    complete: {
+                        try? recordListStore.completeRecord(id: record.id)
+                    },
+                    delete: {
+                        try? recordListStore.deleteRecord(id: record.id)
+                    }
+                )
+                .frame(minHeight: recordRowHeight(for: record))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func cappedListHeight(count: Int, rowHeight: CGFloat, spacing: CGFloat) -> CGFloat {
-        let visibleRows = min(count, maximumVisibleRows)
-        let visibleGaps = max(visibleRows - 1, 0)
-        return CGFloat(visibleRows) * rowHeight + CGFloat(visibleGaps) * spacing
+    private func cappedListHeight(rowHeights: [CGFloat], spacing: CGFloat) -> CGFloat {
+        guard !rowHeights.isEmpty else {
+            return 0
+        }
+
+        let visibleGaps = max(rowHeights.count - 1, 0)
+        return rowHeights.reduce(0, +) + CGFloat(visibleGaps) * spacing
+    }
+
+    private func recordRowHeight(for record: Record) -> CGFloat {
+        if record.status == .completed || RecordDisplaySupport.displayTime(for: record) != nil {
+            return detailedRecordRowHeight
+        }
+
+        return compactRecordRowHeight
     }
 
     private var emptyText: String {
-        recordListStore.hasStorageDirectory
-            ? localizer.string(.notesPlaceholder)
-            : localizer.string(.noStorageLocation)
+        guard recordListStore.hasStorageDirectory else {
+            return localizer.string(.noStorageLocation)
+        }
+
+        switch recordDisplayMode {
+        case .active:
+            return localizer.string(.notesPlaceholder)
+        case .history:
+            return localizer.string(.historyPlaceholder)
+        }
     }
 
     private var trimmedTitle: String {
         draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var isReminderDraft: Bool {
+        draftKind == .reminder
     }
 
     private var addButtonHelp: String {
@@ -288,10 +371,18 @@ private struct NotesTodosCard: View {
             )
             draftTitle = ""
             addError = nil
+            recordDisplayMode = .active
         } catch RecordListStoreError.missingStorageDirectory {
             addError = localizer.string(.noStorageLocation)
         } catch {
             addError = localizer.string(.recordAddError)
+        }
+    }
+
+    private func requestContentResizeAfterLayout() {
+        Task { @MainActor in
+            await Task.yield()
+            requestContentResize()
         }
     }
 }
@@ -300,6 +391,7 @@ private struct RecordRow: View {
     let record: Record
     let localizer: Localizer
     let complete: () -> Void
+    let delete: () -> Void
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 7) {
@@ -336,6 +428,14 @@ private struct RecordRow: View {
             }
 
             Spacer(minLength: 0)
+
+            Button(action: delete) {
+                Image(systemName: "trash")
+                    .font(.system(size: 11))
+            }
+            .buttonStyle(.borderless)
+            .controlSize(.small)
+            .help(localizer.string(.deleteRecordButton))
         }
     }
 
@@ -346,6 +446,11 @@ private struct RecordRow: View {
 
         return localizer.string(record.kind == .reminder ? .completeReminder : .completeTodo)
     }
+}
+
+private enum RecordDisplayMode: Hashable {
+    case active
+    case history
 }
 
 private struct PomodoroCard: View {
@@ -519,7 +624,7 @@ private struct CalendarCard: View {
             } else if calendarEventsStore.events.isEmpty {
                 statusText(localizer.string(.calendarNoEvents))
             } else if calendarEventsStore.events.count > maximumVisibleRows {
-                ScrollView {
+                ScrollView(.vertical, showsIndicators: false) {
                     eventRows
                 }
                 .frame(height: eventListHeight)

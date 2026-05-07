@@ -15,6 +15,10 @@ final class MacOSLaunchAtLoginService: LaunchAtLoginServicing {
             if isEnabled {
                 try service.register()
             }
+        case .notFound:
+            if isEnabled {
+                try service.register()
+            }
         default:
             if isEnabled {
                 try service.register()

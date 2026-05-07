@@ -4,12 +4,20 @@ import UserNotifications
 
 struct UserNotificationReminderScheduler: ReminderNotificationScheduling {
     func currentAuthorization() async -> ReminderNotificationAuthorization {
-        await authorization(from: UNUserNotificationCenter.current().notificationSettings())
+        guard let notificationCenter else {
+            return .unavailable
+        }
+
+        return await authorization(from: notificationCenter.notificationSettings())
     }
 
     func requestAuthorization() async -> ReminderNotificationAuthorization {
+        guard let notificationCenter else {
+            return .unavailable
+        }
+
         do {
-            let isAllowed = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
+            let isAllowed = try await notificationCenter.requestAuthorization(options: [.alert, .sound])
             return isAllowed ? .authorized : .denied
         } catch {
             return .unavailable
@@ -17,6 +25,10 @@ struct UserNotificationReminderScheduler: ReminderNotificationScheduling {
     }
 
     func scheduleReminderNotification(_ request: ReminderNotificationRequest) async throws {
+        guard let notificationCenter else {
+            throw UserNotificationReminderSchedulerError.unavailable
+        }
+
         let content = UNMutableNotificationContent()
         content.title = request.title
         content.body = request.body
@@ -32,7 +44,18 @@ struct UserNotificationReminderScheduler: ReminderNotificationScheduling {
             trigger: trigger
         )
 
-        try await UNUserNotificationCenter.current().add(notificationRequest)
+        try await notificationCenter.add(notificationRequest)
+    }
+
+    private var notificationCenter: UNUserNotificationCenter? {
+        guard
+            Bundle.main.bundleURL.pathExtension == "app",
+            Bundle.main.bundleIdentifier != nil
+        else {
+            return nil
+        }
+
+        return UNUserNotificationCenter.current()
     }
 
     private func authorization(from settings: UNNotificationSettings) -> ReminderNotificationAuthorization {
@@ -47,4 +70,8 @@ struct UserNotificationReminderScheduler: ReminderNotificationScheduling {
             return .unavailable
         }
     }
+}
+
+private enum UserNotificationReminderSchedulerError: Error {
+    case unavailable
 }

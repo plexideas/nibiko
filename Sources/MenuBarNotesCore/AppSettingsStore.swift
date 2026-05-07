@@ -182,11 +182,9 @@ public final class AppSettingsStore: ObservableObject {
         var nextSettings = settings
         mutation(&nextSettings)
         nextSettings.cardOrder = MenuCard.normalizedOrder(from: nextSettings.cardOrder)
-        nextSettings.markdownStorageDirectory = nextSettings.markdownStorageDirectory?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        if nextSettings.markdownStorageDirectory?.isEmpty == true {
-            nextSettings.markdownStorageDirectory = nil
-        }
+        nextSettings.markdownStorageDirectory = AppSettings.normalizedMarkdownStorageDirectory(
+            nextSettings.markdownStorageDirectory
+        )
         nextSettings.pomodoroTemplates = PomodoroTemplate.normalizedTemplates(nextSettings.pomodoroTemplates)
         if !nextSettings.pomodoroTemplates.contains(where: { $0.id == nextSettings.selectedPomodoroTemplateID }) {
             nextSettings.selectedPomodoroTemplateID = nextSettings.pomodoroTemplates[0].id

@@ -65,6 +65,12 @@ public enum MenuCardVisibility {
 }
 
 public struct AppSettings: Codable, Equatable, Sendable {
+    public static var defaultMarkdownStorageDirectory: String {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Documents/Notes", isDirectory: true)
+            .path
+    }
+
     public var appearanceMode: AppearanceMode
     public var cardOrder: [MenuCard]
     public var markdownStorageDirectory: String?
@@ -109,7 +115,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
     ) {
         self.appearanceMode = appearanceMode
         self.cardOrder = MenuCard.normalizedOrder(from: cardOrder)
-        self.markdownStorageDirectory = markdownStorageDirectory
+        self.markdownStorageDirectory = Self.normalizedMarkdownStorageDirectory(markdownStorageDirectory)
         self.quickAddHotkey = quickAddHotkey
         self.isPomodoroCardVisible = isPomodoroCardVisible
         self.pomodoroTemplates = PomodoroTemplate.normalizedTemplates(pomodoroTemplates)
@@ -132,7 +138,9 @@ public struct AppSettings: Codable, Equatable, Sendable {
         cardOrder = MenuCard.normalizedOrder(
             from: try container.decodeIfPresent([MenuCard].self, forKey: .cardOrder) ?? MenuCard.defaultOrder
         )
-        markdownStorageDirectory = try container.decodeIfPresent(String.self, forKey: .markdownStorageDirectory)
+        markdownStorageDirectory = Self.normalizedMarkdownStorageDirectory(
+            try container.decodeIfPresent(String.self, forKey: .markdownStorageDirectory)
+        )
         quickAddHotkey = try container.decodeIfPresent(HotkeyBinding.self, forKey: .quickAddHotkey) ?? .default
         isPomodoroCardVisible = try container.decodeIfPresent(Bool.self, forKey: .isPomodoroCardVisible) ?? true
         pomodoroTemplates = PomodoroTemplate.normalizedTemplates(
@@ -180,6 +188,15 @@ public struct AppSettings: Codable, Equatable, Sendable {
         }
 
         return templates[0].id
+    }
+
+    static func normalizedMarkdownStorageDirectory(_ directory: String?) -> String {
+        let trimmedDirectory = directory?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let trimmedDirectory, !trimmedDirectory.isEmpty {
+            return trimmedDirectory
+        }
+
+        return defaultMarkdownStorageDirectory
     }
 }
 

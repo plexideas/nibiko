@@ -1,6 +1,10 @@
 import Foundation
 
 public struct MarkdownRecordsStore: Sendable {
+    private let recordsFileName = "MenuBarNotes.md"
+    private let recordBlockStart = "<!-- menuBarNotesRecord -->"
+    private let recordBlockEnd = "<!-- /menuBarNotesRecord -->"
+
     public init() {}
 
     public func loadRecords(in directory: URL) throws -> [Record] {
@@ -8,22 +12,19 @@ public struct MarkdownRecordsStore: Sendable {
             return []
         }
 
-        let fileURLs = try FileManager.default.contentsOfDirectory(
-            at: directory,
-            includingPropertiesForKeys: [.isRegularFileKey],
-            options: [.skipsHiddenFiles]
-        )
-
-        let records = fileURLs
-            .filter { $0.pathExtension.lowercased() == "md" }
-            .compactMap { try? parseRecord(at: $0) }
-
-        return records.sorted { lhs, rhs in
-            if lhs.status != rhs.status {
-                return lhs.status == .active
+        let records: [Record]
+        let fileURL = recordsURL(in: directory)
+        if FileManager.default.fileExists(atPath: fileURL.path) {
+            records = try parseRecordsFile(at: fileURL)
+        } else {
+            let legacyRecords = try loadLegacyRecords(in: directory)
+            if !legacyRecords.isEmpty {
+                try? writeRecords(legacyRecords, in: directory)
             }
-            return lhs.updatedAt > rhs.updatedAt
+            records = legacyRecords
         }
+
+        return sortedRecords(records)
     }
 
     @discardableResult
@@ -55,37 +56,114 @@ public struct MarkdownRecordsStore: Sendable {
         in directory: URL,
         completedAt: Date = Date()
     ) throws {
-        var record = try parseRecord(at: recordURL(for: id, in: directory))
-        record.status = .completed
-        record.completedAt = completedAt
-        record.updatedAt = completedAt
-        try writeRecord(record, in: directory)
+        var records = try loadRecordsForMutation(in: directory)
+        guard let index = records.firstIndex(where: { $0.id == id }) else {
+            throw MarkdownRecordsStoreError.malformedRecord
+        }
+
+        records[index].status = .completed
+        records[index].completedAt = completedAt
+        records[index].updatedAt = completedAt
+        try writeRecords(records, in: directory)
+    }
+
+    public func deleteRecord(id: String, in directory: URL) throws {
+        var records = try loadRecordsForMutation(in: directory)
+        guard let index = records.firstIndex(where: { $0.id == id }) else {
+            throw MarkdownRecordsStoreError.malformedRecord
+        }
+
+        records.remove(at: index)
+        try writeRecords(records, in: directory)
     }
 
     public func writeRecord(_ record: Record, in directory: URL) throws {
+        var records = try loadRecordsForMutation(in: directory)
+        if let index = records.firstIndex(where: { $0.id == record.id }) {
+            records[index] = record
+        } else {
+            records.append(record)
+        }
+
+        try writeRecords(records, in: directory)
+    }
+
+    private func loadLegacyRecords(in directory: URL) throws -> [Record] {
+        let fileURLs = try FileManager.default.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        )
+
+        return fileURLs
+            .filter { $0.pathExtension.lowercased() == "md" && $0.lastPathComponent != recordsFileName }
+            .compactMap { try? parseRecord(at: $0) }
+    }
+
+    private func loadRecordsForMutation(in directory: URL) throws -> [Record] {
+        if FileManager.default.fileExists(atPath: directory.path) {
+            return try loadRecords(in: directory)
+        }
+
+        return []
+    }
+
+    private func writeRecords(_ records: [Record], in directory: URL) throws {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        try serializedMarkdown(for: record).write(
-            to: recordURL(for: record.id, in: directory),
+        try serializedRecordsFile(for: records).write(
+            to: recordsURL(in: directory),
             atomically: true,
             encoding: .utf8
         )
     }
 
-    private func recordURL(for id: String, in directory: URL) -> URL {
-        directory.appendingPathComponent(safeFileName(for: id)).appendingPathExtension("md")
+    private func recordsURL(in directory: URL) -> URL {
+        directory.appendingPathComponent(recordsFileName)
     }
 
-    private func safeFileName(for id: String) -> String {
-        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_"))
-        let scalars = id.unicodeScalars.map { scalar in
-            allowed.contains(scalar) ? Character(scalar) : "-"
+    private func sortedRecords(_ records: [Record]) -> [Record] {
+        records.sorted { lhs, rhs in
+            if lhs.status != rhs.status {
+                return lhs.status == .active
+            }
+            return lhs.updatedAt > rhs.updatedAt
         }
-        let fileName = String(scalars).trimmingCharacters(in: CharacterSet(charactersIn: "-"))
-        return fileName.isEmpty ? UUID().uuidString : fileName
+    }
+
+    private func parseRecordsFile(at fileURL: URL) throws -> [Record] {
+        let text = try String(contentsOf: fileURL, encoding: .utf8)
+        return parseRecordBlocks(in: text).compactMap { try? parseRecord(from: $0) }
+    }
+
+    private func parseRecordBlocks(in text: String) -> [String] {
+        let lines = text.components(separatedBy: .newlines)
+        var blocks: [String] = []
+        var index = lines.startIndex
+
+        while index < lines.endIndex {
+            guard lines[index] == recordBlockStart else {
+                index = lines.index(after: index)
+                continue
+            }
+
+            let blockStart = lines.index(after: index)
+            guard let blockEnd = lines[blockStart...].firstIndex(of: recordBlockEnd) else {
+                break
+            }
+
+            blocks.append(lines[blockStart..<blockEnd].joined(separator: "\n"))
+            index = lines.index(after: blockEnd)
+        }
+
+        return blocks
     }
 
     private func parseRecord(at fileURL: URL) throws -> Record {
         let text = try String(contentsOf: fileURL, encoding: .utf8)
+        return try parseRecord(from: text)
+    }
+
+    private func parseRecord(from text: String) throws -> Record {
         let lines = text.components(separatedBy: .newlines)
         guard lines.first == "---", let endIndex = lines.dropFirst().firstIndex(of: "---") else {
             throw MarkdownRecordsStoreError.malformedRecord
@@ -158,6 +236,25 @@ public struct MarkdownRecordsStore: Sendable {
 
         let body = lines.dropFirst().joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
         return (title.trimmingCharacters(in: .whitespacesAndNewlines), body)
+    }
+
+    private func serializedRecordsFile(for records: [Record]) -> String {
+        var lines = ["# Menu Bar Notes", ""]
+        let recordsByCreation = records.sorted { lhs, rhs in
+            if lhs.createdAt != rhs.createdAt {
+                return lhs.createdAt < rhs.createdAt
+            }
+            return lhs.id < rhs.id
+        }
+
+        for record in recordsByCreation {
+            lines.append(recordBlockStart)
+            lines.append(serializedMarkdown(for: record).trimmingCharacters(in: .newlines))
+            lines.append(recordBlockEnd)
+            lines.append("")
+        }
+
+        return lines.joined(separator: "\n") + "\n"
     }
 
     private func serializedMarkdown(for record: Record) -> String {

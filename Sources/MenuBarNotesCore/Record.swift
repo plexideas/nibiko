@@ -88,6 +88,24 @@ public enum ActiveRecordCounter {
 }
 
 public enum RecordDisplaySupport {
+    public static func activeRecordsForDisplay(_ records: [Record]) -> [Record] {
+        recordsForDisplay(records.filter { $0.status == .active })
+    }
+
+    public static func historyRecordsForDisplay(_ records: [Record]) -> [Record] {
+        records
+            .filter { $0.status == .completed }
+            .sorted { lhs, rhs in
+                let lhsCompletedAt = lhs.completedAt ?? lhs.updatedAt
+                let rhsCompletedAt = rhs.completedAt ?? rhs.updatedAt
+                if lhsCompletedAt != rhsCompletedAt {
+                    return lhsCompletedAt > rhsCompletedAt
+                }
+
+                return lhs.updatedAt > rhs.updatedAt
+            }
+    }
+
     public static func recordsForDisplay(_ records: [Record]) -> [Record] {
         records.sorted { lhs, rhs in
             if lhs.status != rhs.status {

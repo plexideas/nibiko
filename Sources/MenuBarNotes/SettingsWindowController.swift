@@ -83,7 +83,7 @@ private struct NotesTodosSettingsView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(selectedPath)
                         .font(.system(size: 12))
-                        .foregroundStyle(settingsStore.settings.markdownStorageDirectory == nil ? .secondary : .primary)
+                        .foregroundStyle(.primary)
                         .lineLimit(2)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -123,7 +123,7 @@ private struct NotesTodosSettingsView: View {
     }
 
     private var selectedPath: String {
-        settingsStore.settings.markdownStorageDirectory ?? localizer.string(.noStorageLocation)
+        settingsStore.settings.markdownStorageDirectory ?? AppSettings.defaultMarkdownStorageDirectory
     }
 
     private var quickAddHotkeyBinding: Binding<HotkeyBinding> {

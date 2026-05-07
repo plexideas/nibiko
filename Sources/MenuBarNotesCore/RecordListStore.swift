@@ -78,6 +78,15 @@ public final class RecordListStore: ObservableObject {
         try completeRecord(id: id)
     }
 
+    public func deleteRecord(id: String) throws {
+        guard let directory else {
+            throw RecordListStoreError.missingStorageDirectory
+        }
+
+        try storage.deleteRecord(id: id, in: directory)
+        reload()
+    }
+
     public func reload() {
         guard let directory else {
             records = []

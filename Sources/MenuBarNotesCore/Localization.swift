@@ -8,6 +8,9 @@ public enum LocalizationKey: String, CaseIterable, Sendable {
     case progressSummaryFormat
     case notesCardTitle
     case notesPlaceholder
+    case historyPlaceholder
+    case activeRecordsMode
+    case historyRecordsMode
     case noteKind
     case todoKind
     case reminderKind
@@ -15,6 +18,7 @@ public enum LocalizationKey: String, CaseIterable, Sendable {
     case addNoteButton
     case addTodoButton
     case addReminderButton
+    case deleteRecordButton
     case completeTodo
     case completeReminder
     case completedTodo
@@ -193,6 +197,9 @@ public struct Localizer: Sendable {
         .progressSummaryFormat: "%d active items - %d completed today",
         .notesCardTitle: "Notes / Todos / Reminders",
         .notesPlaceholder: "No active records yet.",
+        .historyPlaceholder: "No completed records yet.",
+        .activeRecordsMode: "Active",
+        .historyRecordsMode: "History",
         .noteKind: "Note",
         .todoKind: "Todo",
         .reminderKind: "Reminder",
@@ -200,6 +207,7 @@ public struct Localizer: Sendable {
         .addNoteButton: "Add Note",
         .addTodoButton: "Add Todo",
         .addReminderButton: "Add Reminder",
+        .deleteRecordButton: "Delete record",
         .completeTodo: "Complete todo",
         .completeReminder: "Complete reminder",
         .completedTodo: "Completed",
@@ -207,7 +215,7 @@ public struct Localizer: Sendable {
         .notificationsDeniedStatus: "Notifications are off. Reminders still appear here.",
         .notificationsUnavailableStatus: "Notifications are unavailable. Reminders still appear here.",
         .notificationsFailedStatus: "Notification could not be scheduled. Reminder stays listed.",
-        .noStorageLocation: "Choose a Markdown folder in Settings to start capturing records.",
+        .noStorageLocation: "Using the default Markdown folder. Choose another in Settings if needed.",
         .recordAddError: "Could not save the record.",
         .pomodoroCardTitle: "Pomodoro",
         .pomodoroPlaceholder: "Focus timer is hidden.",
@@ -265,7 +273,7 @@ public struct Localizer: Sendable {
         .launchAtLoginLabel: "Launch at Login",
         .markdownStorageLocationLabel: "Markdown Storage Location",
         .chooseMarkdownStorageLocation: "Choose Folder...",
-        .markdownStorageLocationHelp: "Notes and todos are saved as Markdown files in this folder.",
+        .markdownStorageLocationHelp: "Notes, todos, and reminders are saved to one Markdown file in this folder.",
         .quickAddHotkeyLabel: "Quick Add Hotkey",
         .quickAddHotkeyDisabled: "Disabled",
         .quickAddHotkeyStatusDisabled: "Quick Add is disabled.",
@@ -296,6 +304,9 @@ public struct Localizer: Sendable {
         .progressSummaryFormat: "%d aktive Einträge - %d heute erledigt",
         .notesCardTitle: "Notizen / Aufgaben / Erinnerungen",
         .notesPlaceholder: "Noch keine aktiven Einträge.",
+        .historyPlaceholder: "Noch keine erledigten Einträge.",
+        .activeRecordsMode: "Aktiv",
+        .historyRecordsMode: "Verlauf",
         .noteKind: "Notiz",
         .todoKind: "Aufgabe",
         .reminderKind: "Erinnerung",
@@ -303,6 +314,7 @@ public struct Localizer: Sendable {
         .addNoteButton: "Notiz hinzufügen",
         .addTodoButton: "Aufgabe hinzufügen",
         .addReminderButton: "Erinnerung hinzufügen",
+        .deleteRecordButton: "Eintrag löschen",
         .completeTodo: "Aufgabe erledigen",
         .completeReminder: "Erinnerung erledigen",
         .completedTodo: "Erledigt",
@@ -310,7 +322,7 @@ public struct Localizer: Sendable {
         .notificationsDeniedStatus: "Mitteilungen sind aus. Erinnerungen bleiben hier sichtbar.",
         .notificationsUnavailableStatus: "Mitteilungen sind nicht verfügbar. Erinnerungen bleiben hier sichtbar.",
         .notificationsFailedStatus: "Mitteilung konnte nicht geplant werden. Die Erinnerung bleibt sichtbar.",
-        .noStorageLocation: "Wähle in den Einstellungen einen Markdown-Ordner zum Erfassen.",
+        .noStorageLocation: "Der Standard-Markdown-Ordner wird verwendet. Wähle bei Bedarf einen anderen in den Einstellungen.",
         .recordAddError: "Eintrag konnte nicht gespeichert werden.",
         .pomodoroCardTitle: "Pomodoro",
         .pomodoroPlaceholder: "Fokus-Timer ist ausgeblendet.",
@@ -368,7 +380,7 @@ public struct Localizer: Sendable {
         .launchAtLoginLabel: "Beim Anmelden starten",
         .markdownStorageLocationLabel: "Markdown-Speicherort",
         .chooseMarkdownStorageLocation: "Ordner wählen...",
-        .markdownStorageLocationHelp: "Notizen und Aufgaben werden in diesem Ordner als Markdown-Dateien gespeichert.",
+        .markdownStorageLocationHelp: "Notizen, Aufgaben und Erinnerungen werden in einer Markdown-Datei in diesem Ordner gespeichert.",
         .quickAddHotkeyLabel: "Schnellerfassung-Tastenkürzel",
         .quickAddHotkeyDisabled: "Deaktiviert",
         .quickAddHotkeyStatusDisabled: "Schnellerfassung ist deaktiviert.",
@@ -399,6 +411,9 @@ public struct Localizer: Sendable {
         .progressSummaryFormat: "활성 항목 %d개 - 오늘 완료 %d개",
         .notesCardTitle: "노트 / 할 일 / 미리 알림",
         .notesPlaceholder: "아직 활성 기록이 없습니다.",
+        .historyPlaceholder: "아직 완료된 기록이 없습니다.",
+        .activeRecordsMode: "활성",
+        .historyRecordsMode: "기록",
         .noteKind: "노트",
         .todoKind: "할 일",
         .reminderKind: "알림",
@@ -406,6 +421,7 @@ public struct Localizer: Sendable {
         .addNoteButton: "노트 추가",
         .addTodoButton: "할 일 추가",
         .addReminderButton: "알림 추가",
+        .deleteRecordButton: "기록 삭제",
         .completeTodo: "할 일 완료",
         .completeReminder: "알림 완료",
         .completedTodo: "완료됨",
@@ -413,7 +429,7 @@ public struct Localizer: Sendable {
         .notificationsDeniedStatus: "알림이 꺼져 있습니다. 알림 항목은 계속 여기에 표시됩니다.",
         .notificationsUnavailableStatus: "알림을 사용할 수 없습니다. 알림 항목은 계속 여기에 표시됩니다.",
         .notificationsFailedStatus: "알림을 예약하지 못했습니다. 알림 항목은 계속 표시됩니다.",
-        .noStorageLocation: "기록을 시작하려면 설정에서 Markdown 폴더를 선택하세요.",
+        .noStorageLocation: "기본 Markdown 폴더를 사용합니다. 필요하면 설정에서 다른 폴더를 선택하세요.",
         .recordAddError: "기록을 저장할 수 없습니다.",
         .pomodoroCardTitle: "포모도로",
         .pomodoroPlaceholder: "집중 타이머가 숨겨져 있습니다.",
@@ -471,7 +487,7 @@ public struct Localizer: Sendable {
         .launchAtLoginLabel: "로그인 시 실행",
         .markdownStorageLocationLabel: "Markdown 저장 위치",
         .chooseMarkdownStorageLocation: "폴더 선택...",
-        .markdownStorageLocationHelp: "노트와 할 일은 이 폴더에 Markdown 파일로 저장됩니다.",
+        .markdownStorageLocationHelp: "노트, 할 일, 리마인더는 이 폴더의 Markdown 파일 하나에 저장됩니다.",
         .quickAddHotkeyLabel: "빠른 추가 단축키",
         .quickAddHotkeyDisabled: "사용 안 함",
         .quickAddHotkeyStatusDisabled: "빠른 추가가 꺼져 있습니다.",
@@ -502,6 +518,9 @@ public struct Localizer: Sendable {
         .progressSummaryFormat: "%d 个活跃项目 - 今日完成 %d 个",
         .notesCardTitle: "笔记 / 待办 / 提醒",
         .notesPlaceholder: "还没有活跃记录。",
+        .historyPlaceholder: "还没有已完成记录。",
+        .activeRecordsMode: "活跃",
+        .historyRecordsMode: "历史",
         .noteKind: "笔记",
         .todoKind: "待办",
         .reminderKind: "提醒",
@@ -509,6 +528,7 @@ public struct Localizer: Sendable {
         .addNoteButton: "添加笔记",
         .addTodoButton: "添加待办",
         .addReminderButton: "添加提醒",
+        .deleteRecordButton: "删除记录",
         .completeTodo: "完成待办",
         .completeReminder: "完成提醒",
         .completedTodo: "已完成",
@@ -516,7 +536,7 @@ public struct Localizer: Sendable {
         .notificationsDeniedStatus: "通知已关闭。提醒仍会显示在这里。",
         .notificationsUnavailableStatus: "通知不可用。提醒仍会显示在这里。",
         .notificationsFailedStatus: "通知无法安排。提醒仍会保留显示。",
-        .noStorageLocation: "请在设置中选择 Markdown 文件夹后再开始记录。",
+        .noStorageLocation: "正在使用默认 Markdown 文件夹。如有需要，可在设置中选择其他文件夹。",
         .recordAddError: "无法保存记录。",
         .pomodoroCardTitle: "番茄钟",
         .pomodoroPlaceholder: "专注计时器已隐藏。",
@@ -574,7 +594,7 @@ public struct Localizer: Sendable {
         .launchAtLoginLabel: "登录时启动",
         .markdownStorageLocationLabel: "Markdown 存储位置",
         .chooseMarkdownStorageLocation: "选择文件夹...",
-        .markdownStorageLocationHelp: "笔记和待办会作为 Markdown 文件保存在此文件夹中。",
+        .markdownStorageLocationHelp: "笔记、待办和提醒会保存在此文件夹中的一个 Markdown 文件里。",
         .quickAddHotkeyLabel: "快速添加快捷键",
         .quickAddHotkeyDisabled: "已禁用",
         .quickAddHotkeyStatusDisabled: "快速添加已关闭。",

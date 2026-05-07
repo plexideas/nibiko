@@ -16,7 +16,7 @@ final class MenuBarController: NSObject {
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private let popover = NSPopover()
     private let popoverWidth: CGFloat = 340
-    private let maximumPopoverScreenHeightRatio: CGFloat = 2.0 / 3.0
+    private let maximumPopoverScreenHeightRatio: CGFloat = 0.85
     private var hostingController: NSHostingController<PopoverRootView>?
 
     init(
@@ -68,15 +68,28 @@ final class MenuBarController: NSObject {
                 requestQuit: { [weak self] in
                     self?.popover.performClose(nil)
                     self?.requestQuit()
+                },
+                requestContentResize: { [weak self] in
+                    self?.refreshPopoverSizeIfShown()
                 }
             )
         )
         self.hostingController = hostingController
-        popover.contentViewController = hostingController
+        popover.contentViewController = ScrollableTopAlignedContentViewController(
+            hostingController: hostingController
+        )
     }
 
     func updateActiveCount(_ count: Int) {
         statusItem.button?.title = count > 0 ? "\(count)" : ""
+    }
+
+    func refreshPopoverSizeIfShown() {
+        guard popover.isShown, let button = statusItem.button else {
+            return
+        }
+
+        updatePopoverContentSize(relativeTo: button)
     }
 
     @objc
@@ -103,11 +116,104 @@ final class MenuBarController: NSObject {
             in: NSSize(width: popoverWidth, height: maximumHeight)
         )
         let height = min(max(fittingSize.height, 1), maximumHeight)
-        popover.contentSize = NSSize(width: popoverWidth, height: ceil(height))
+        let nextContentSize = NSSize(width: popoverWidth, height: ceil(height))
+        guard abs(popover.contentSize.height - nextContentSize.height) > 0.5
+            || abs(popover.contentSize.width - nextContentSize.width) > 0.5
+        else {
+            return
+        }
+
+        setPopoverContentSize(nextContentSize)
+    }
+
+    private func setPopoverContentSize(_ nextContentSize: NSSize) {
+        guard popover.isShown, let window = popover.contentViewController?.view.window else {
+            popover.contentSize = nextContentSize
+            return
+        }
+
+        let currentFrame = window.frame
+        popover.contentSize = nextContentSize
+        let targetFrame = window.frame
+        guard currentFrame.size != targetFrame.size || currentFrame.origin != targetFrame.origin else {
+            return
+        }
+
+        window.setFrame(currentFrame, display: false)
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.16
+            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            window.animator().setFrame(targetFrame, display: true)
+        }
     }
 
     private func maximumPopoverHeight(relativeTo button: NSStatusBarButton) -> CGFloat {
         let screen = button.window?.screen ?? NSScreen.main
         return floor((screen?.visibleFrame.height ?? 720) * maximumPopoverScreenHeightRatio)
+    }
+}
+
+private final class ScrollableTopAlignedContentViewController<Content: View>: NSViewController {
+    private let hostingController: NSHostingController<Content>
+    private let scrollView = NSScrollView()
+    private let documentView = FlippedView()
+
+    init(hostingController: NSHostingController<Content>) {
+        self.hostingController = hostingController
+        super.init(nibName: nil, bundle: nil)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        nil
+    }
+
+    override func loadView() {
+        scrollView.drawsBackground = false
+        scrollView.borderType = .noBorder
+        scrollView.hasHorizontalScroller = false
+        scrollView.hasVerticalScroller = false
+        scrollView.autohidesScrollers = true
+        scrollView.horizontalScrollElasticity = .none
+        scrollView.verticalScrollElasticity = .allowed
+        scrollView.documentView = documentView
+        view = scrollView
+
+        addChild(hostingController)
+        documentView.addSubview(hostingController.view)
+    }
+
+    override func viewDidLayout() {
+        super.viewDidLayout()
+        layoutDocument()
+    }
+
+    private func layoutDocument() {
+        let width = scrollView.contentView.bounds.width
+        guard width > 0 else {
+            return
+        }
+
+        let fittingSize = hostingController.sizeThatFits(
+            in: NSSize(width: width, height: .greatestFiniteMagnitude)
+        )
+        let contentHeight = ceil(max(fittingSize.height, 1))
+        let documentHeight = max(contentHeight, scrollView.contentView.bounds.height)
+        let nextDocumentFrame = NSRect(x: 0, y: 0, width: width, height: documentHeight)
+        let shouldPinToTop = documentView.frame.size != nextDocumentFrame.size
+
+        documentView.frame = nextDocumentFrame
+        hostingController.view.frame = NSRect(x: 0, y: 0, width: width, height: contentHeight)
+
+        if shouldPinToTop {
+            scrollView.contentView.scroll(to: .zero)
+            scrollView.reflectScrolledClipView(scrollView.contentView)
+        }
+    }
+}
+
+private final class FlippedView: NSView {
+    override var isFlipped: Bool {
+        true
     }
 }

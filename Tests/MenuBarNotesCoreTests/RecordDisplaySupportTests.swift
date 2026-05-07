@@ -42,4 +42,36 @@ struct RecordDisplaySupportTests {
         #expect(displayed.map(\.title) == ["Earlier", "Later", "Todo", "Completed"])
         #expect(RecordDisplaySupport.displayTime(for: earlierReminder) == earlierReminder.dueAt)
     }
+
+    @Test("separates active records from completed history")
+    func separatesActiveRecordsFromHistory() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let activeTodo = Record(
+            kind: .todo,
+            title: "Active todo",
+            updatedAt: now.addingTimeInterval(60)
+        )
+        let completedTodo = Record(
+            kind: .todo,
+            title: "Done todo",
+            status: .completed,
+            updatedAt: now.addingTimeInterval(120),
+            completedAt: now.addingTimeInterval(120)
+        )
+        let completedReminder = Record(
+            kind: .reminder,
+            title: "Done reminder",
+            status: .completed,
+            updatedAt: now.addingTimeInterval(180),
+            completedAt: now.addingTimeInterval(180)
+        )
+
+        let records = [completedTodo, activeTodo, completedReminder]
+
+        #expect(RecordDisplaySupport.activeRecordsForDisplay(records).map(\.title) == ["Active todo"])
+        #expect(RecordDisplaySupport.historyRecordsForDisplay(records).map(\.title) == [
+            "Done reminder",
+            "Done todo"
+        ])
+    }
 }
