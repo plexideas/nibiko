@@ -63,6 +63,12 @@ public final class AppSettingsStore: ObservableObject {
         }
     }
 
+    public func setQuickAddHotkey(_ binding: HotkeyBinding) {
+        update { settings in
+            settings.quickAddHotkey = binding
+        }
+    }
+
     public func moveCard(_ card: MenuCard, direction: CardMoveDirection) {
         update { settings in
             guard let index = settings.cardOrder.firstIndex(of: card) else {

@@ -39,6 +39,15 @@ public enum LocalizationKey: String, CaseIterable, Sendable {
     case markdownStorageLocationLabel
     case chooseMarkdownStorageLocation
     case markdownStorageLocationHelp
+    case quickAddHotkeyLabel
+    case quickAddHotkeyDisabled
+    case quickAddHotkeyStatusDisabled
+    case quickAddHotkeyStatusRegistered
+    case quickAddHotkeyStatusConflict
+    case quickAddHotkeyStatusFailed
+    case quickAddTitle
+    case quickAddSubmitButton
+    case quickAddCancelButton
     case moveUp
     case moveDown
     case featureComingSoon
@@ -113,6 +122,15 @@ public struct Localizer: Sendable {
         .markdownStorageLocationLabel: "Markdown Storage Location",
         .chooseMarkdownStorageLocation: "Choose Folder...",
         .markdownStorageLocationHelp: "Notes and todos are saved as Markdown files in this folder.",
+        .quickAddHotkeyLabel: "Quick Add Hotkey",
+        .quickAddHotkeyDisabled: "Disabled",
+        .quickAddHotkeyStatusDisabled: "Quick Add is disabled.",
+        .quickAddHotkeyStatusRegistered: "Quick Add is ready: %@.",
+        .quickAddHotkeyStatusConflict: "That shortcut is already in use. Choose another hotkey.",
+        .quickAddHotkeyStatusFailed: "Quick Add could not register this shortcut.",
+        .quickAddTitle: "Quick Add",
+        .quickAddSubmitButton: "Add",
+        .quickAddCancelButton: "Cancel",
         .moveUp: "Move Up",
         .moveDown: "Move Down",
         .featureComingSoon: "Configuration for this area arrives in a later phase.",

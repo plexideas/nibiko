@@ -4,8 +4,16 @@ import SwiftUI
 
 @MainActor
 final class SettingsWindowController: NSWindowController {
-    init(settingsStore: AppSettingsStore, localizer: Localizer) {
-        let contentView = SettingsView(settingsStore: settingsStore, localizer: localizer)
+    init(
+        settingsStore: AppSettingsStore,
+        hotkeyRegistrar: GlobalHotkeyRegistrar,
+        localizer: Localizer
+    ) {
+        let contentView = SettingsView(
+            settingsStore: settingsStore,
+            hotkeyRegistrar: hotkeyRegistrar,
+            localizer: localizer
+        )
         let hostingController = NSHostingController(rootView: contentView)
         let window = NSWindow(contentViewController: hostingController)
         window.title = localizer.string(.settingsTitle)
@@ -25,6 +33,7 @@ final class SettingsWindowController: NSWindowController {
 
 struct SettingsView: View {
     @ObservedObject var settingsStore: AppSettingsStore
+    @ObservedObject var hotkeyRegistrar: GlobalHotkeyRegistrar
     let localizer: Localizer
 
     var body: some View {
@@ -32,7 +41,11 @@ struct SettingsView: View {
             GeneralSettingsView(settingsStore: settingsStore, localizer: localizer)
                 .tabItem { Text(localizer.string(.generalTab)) }
 
-            NotesTodosSettingsView(settingsStore: settingsStore, localizer: localizer)
+            NotesTodosSettingsView(
+                settingsStore: settingsStore,
+                hotkeyRegistrar: hotkeyRegistrar,
+                localizer: localizer
+            )
                 .tabItem { Text(localizer.string(.notesTodosTab)) }
 
             PlaceholderSettingsTab(localizer: localizer)
@@ -48,6 +61,7 @@ struct SettingsView: View {
 
 private struct NotesTodosSettingsView: View {
     @ObservedObject var settingsStore: AppSettingsStore
+    @ObservedObject var hotkeyRegistrar: GlobalHotkeyRegistrar
     let localizer: Localizer
 
     var body: some View {
@@ -68,12 +82,54 @@ private struct NotesTodosSettingsView: View {
                         .controlSize(.small)
                 }
             }
+
+            Section(localizer.string(.quickAddHotkeyLabel)) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Picker(localizer.string(.quickAddHotkeyLabel), selection: quickAddHotkeyBinding) {
+                        Text(localizer.string(.quickAddHotkeyDisabled)).tag(HotkeyBinding.disabled)
+                        ForEach(HotkeyBinding.configurableBindings) { binding in
+                            Text(binding.displayString).tag(binding)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .controlSize(.small)
+
+                    Text(statusText)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
         }
         .formStyle(.grouped)
     }
 
     private var selectedPath: String {
         settingsStore.settings.markdownStorageDirectory ?? localizer.string(.noStorageLocation)
+    }
+
+    private var quickAddHotkeyBinding: Binding<HotkeyBinding> {
+        Binding(
+            get: { settingsStore.settings.quickAddHotkey },
+            set: { settingsStore.setQuickAddHotkey($0) }
+        )
+    }
+
+    private var statusText: String {
+        switch hotkeyRegistrar.status {
+        case .disabled:
+            return localizer.string(.quickAddHotkeyStatusDisabled)
+        case let .registered(binding):
+            return String(
+                format: localizer.string(.quickAddHotkeyStatusRegistered),
+                binding.displayString
+            )
+        case .conflict:
+            return localizer.string(.quickAddHotkeyStatusConflict)
+        case .failed:
+            return localizer.string(.quickAddHotkeyStatusFailed)
+        }
     }
 
     private func chooseFolder() {

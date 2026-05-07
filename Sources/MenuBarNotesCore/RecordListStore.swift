@@ -60,6 +60,11 @@ public final class RecordListStore: ObservableObject {
         try addRecord(RecordDraft(kind: .reminder, title: title, dueAt: dueAt, reminderAt: reminderAt))
     }
 
+    @discardableResult
+    public func addDraft(_ draft: RecordDraft) throws -> Record {
+        try addRecord(draft)
+    }
+
     public func completeRecord(id: String) throws {
         guard let directory else {
             throw RecordListStoreError.missingStorageDirectory

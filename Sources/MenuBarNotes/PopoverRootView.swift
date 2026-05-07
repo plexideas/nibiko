@@ -5,6 +5,7 @@ struct PopoverRootView: View {
     @ObservedObject var settingsStore: AppSettingsStore
     @ObservedObject var recordListStore: RecordListStore
     @ObservedObject var reminderNotificationStore: ReminderNotificationStore
+    let captureService: QuickAddCaptureService
     @State private var draftTitle = ""
     @State private var draftKind: RecordKind = .todo
     @State private var draftReminderAt = Date().addingTimeInterval(3_600)
@@ -25,6 +26,7 @@ struct PopoverRootView: View {
                             NotesTodosCard(
                                 recordListStore: recordListStore,
                                 reminderNotificationStore: reminderNotificationStore,
+                                captureService: captureService,
                                 localizer: localizer,
                                 draftTitle: $draftTitle,
                                 draftKind: $draftKind,
@@ -88,6 +90,7 @@ struct PopoverRootView: View {
 private struct NotesTodosCard: View {
     @ObservedObject var recordListStore: RecordListStore
     @ObservedObject var reminderNotificationStore: ReminderNotificationStore
+    let captureService: QuickAddCaptureService
     let localizer: Localizer
     @Binding var draftTitle: String
     @Binding var draftKind: RecordKind
@@ -215,19 +218,18 @@ private struct NotesTodosCard: View {
         }
 
         do {
-            switch draftKind {
-            case .note:
-                try recordListStore.addNote(title: trimmedTitle)
-            case .todo:
-                try recordListStore.addTodo(title: trimmedTitle)
-            case .reminder:
-                let record = try recordListStore.addReminder(
-                    title: trimmedTitle,
-                    dueAt: draftReminderAt,
-                    reminderAt: draftReminderAt
+            let reminderAt = draftKind == .reminder ? draftReminderAt : nil
+            try captureService.capture(
+                QuickAddCaptureRequest(
+                    source: .popover,
+                    draft: RecordDraft(
+                        kind: draftKind,
+                        title: trimmedTitle,
+                        dueAt: reminderAt,
+                        reminderAt: reminderAt
+                    )
                 )
-                reminderNotificationStore.scheduleIfNeeded(for: record)
-            }
+            )
             draftTitle = ""
             addError = nil
         } catch RecordListStoreError.missingStorageDirectory {

@@ -12,6 +12,7 @@ struct AppSettingsStoreTests {
 
         #expect(store.settings.appearanceMode == .system)
         #expect(store.settings.cardOrder == [.notes, .pomodoro, .calendar])
+        #expect(store.settings.quickAddHotkey == .default)
     }
 
     @Test("appearance changes persist across store recreation")
@@ -49,6 +50,34 @@ struct AppSettingsStoreTests {
 
         let reloadedStore = AppSettingsStore(persistence: persistence)
         #expect(reloadedStore.settings.markdownStorageDirectory == "/tmp/MenuBarNotesRecords")
+    }
+
+    @Test("quick-add hotkey changes persist across store recreation")
+    func persistsQuickAddHotkey() {
+        let defaults = isolatedDefaults()
+        let persistence = UserDefaultsSettingsPersistence(defaults: defaults)
+        let store = AppSettingsStore(persistence: persistence)
+
+        store.setQuickAddHotkey(.controlOptionSpace)
+
+        let reloadedStore = AppSettingsStore(persistence: persistence)
+        #expect(reloadedStore.settings.quickAddHotkey == .controlOptionSpace)
+    }
+
+    @Test("settings without a stored quick-add hotkey migrate to the default binding")
+    func migratesMissingQuickAddHotkey() throws {
+        let data = """
+        {
+          "appearanceMode": "dark",
+          "cardOrder": ["notes", "pomodoro", "calendar"],
+          "markdownStorageDirectory": "/tmp/MenuBarNotesRecords"
+        }
+        """.data(using: .utf8)!
+
+        let settings = try JSONDecoder().decode(AppSettings.self, from: data)
+
+        #expect(settings.appearanceMode == .dark)
+        #expect(settings.quickAddHotkey == .default)
     }
 
     @Test("card order normalization preserves every Phase 1 card once")

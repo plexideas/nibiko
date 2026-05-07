@@ -12,10 +12,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var reminderNotificationStore = ReminderNotificationStore(
         scheduler: UserNotificationReminderScheduler()
     )
+    private lazy var quickAddCaptureService = QuickAddCaptureService(
+        recordListStore: recordListStore,
+        scheduleReminder: { [weak self] record in
+            self?.reminderNotificationStore.scheduleIfNeeded(for: record)
+        }
+    )
+    private lazy var quickAddPanelController = QuickAddPanelController(
+        captureService: quickAddCaptureService,
+        localizer: localizer
+    )
+    private lazy var hotkeyRegistrar = GlobalHotkeyRegistrar { [weak self] in
+        self?.showQuickAddPanel()
+    }
     private lazy var menuBarController = MenuBarController(
         settingsStore: settingsStore,
         recordListStore: recordListStore,
         reminderNotificationStore: reminderNotificationStore,
+        captureService: quickAddCaptureService,
         localizer: localizer,
         showSettings: { [weak self] in self?.showSettings() },
         showAppInfo: { [weak self] in self?.showAppInfo() }
@@ -29,10 +43,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menuBarController.installStatusItem()
         applyAppearance(settingsStore.settings.appearanceMode)
         menuBarController.updateActiveCount(recordListStore.activeCount)
+        hotkeyRegistrar.register(settingsStore.settings.quickAddHotkey)
 
         settingsSubscription = settingsStore.$settings.sink { [weak self] settings in
             self?.applyAppearance(settings.appearanceMode)
             self?.recordListStore.setDirectory(self?.markdownStorageURL(from: settings))
+            self?.hotkeyRegistrar.register(settings.quickAddHotkey)
         }
 
         recordsSubscription = recordListStore.$records.sink { [weak self] records in
@@ -48,6 +64,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if settingsWindowController == nil {
             settingsWindowController = SettingsWindowController(
                 settingsStore: settingsStore,
+                hotkeyRegistrar: hotkeyRegistrar,
                 localizer: localizer
             )
         }
@@ -66,6 +83,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         NSApp.activate(ignoringOtherApps: true)
         appInfoWindowController?.showWindow(nil)
+    }
+
+    private func showQuickAddPanel() {
+        quickAddPanelController.showPanel()
     }
 
     private func applyAppearance(_ mode: AppearanceMode) {
