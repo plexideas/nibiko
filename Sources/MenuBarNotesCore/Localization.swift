@@ -61,6 +61,10 @@ public enum LocalizationKey: String, CaseIterable, Sendable {
     case calendarNoSources
     case calendarRefreshSources
     case settingsButton
+    case exitButton
+    case exitConfirmationTitle
+    case exitConfirmationMessage
+    case cancelButton
     case appInfoButton
     case settingsTitle
     case generalTab
@@ -242,6 +246,10 @@ public struct Localizer: Sendable {
         .calendarNoSources: "No calendars are available.",
         .calendarRefreshSources: "Refresh Calendars",
         .settingsButton: "Settings",
+        .exitButton: "Exit",
+        .exitConfirmationTitle: "Quit Menu Bar Notes?",
+        .exitConfirmationMessage: "Are you sure you want to quit %@?",
+        .cancelButton: "Cancel",
         .appInfoButton: "App Info",
         .settingsTitle: "Settings",
         .generalTab: "General",
@@ -341,6 +349,10 @@ public struct Localizer: Sendable {
         .calendarNoSources: "Keine Kalender verfügbar.",
         .calendarRefreshSources: "Kalender aktualisieren",
         .settingsButton: "Einstellungen",
+        .exitButton: "Beenden",
+        .exitConfirmationTitle: "Menu Bar Notes beenden?",
+        .exitConfirmationMessage: "Möchtest du %@ wirklich beenden?",
+        .cancelButton: "Abbrechen",
         .appInfoButton: "App-Info",
         .settingsTitle: "Einstellungen",
         .generalTab: "Allgemein",
@@ -440,6 +452,10 @@ public struct Localizer: Sendable {
         .calendarNoSources: "사용 가능한 캘린더가 없습니다.",
         .calendarRefreshSources: "캘린더 새로 고침",
         .settingsButton: "설정",
+        .exitButton: "종료",
+        .exitConfirmationTitle: "Menu Bar Notes를 종료할까요?",
+        .exitConfirmationMessage: "정말 %@을 종료하시겠습니까?",
+        .cancelButton: "취소",
         .appInfoButton: "앱 정보",
         .settingsTitle: "설정",
         .generalTab: "일반",
@@ -539,6 +555,10 @@ public struct Localizer: Sendable {
         .calendarNoSources: "没有可用日历。",
         .calendarRefreshSources: "刷新日历",
         .settingsButton: "设置",
+        .exitButton: "退出",
+        .exitConfirmationTitle: "退出 Menu Bar Notes？",
+        .exitConfirmationMessage: "确定要退出 %@ 吗？",
+        .cancelButton: "取消",
         .appInfoButton: "应用信息",
         .settingsTitle: "设置",
         .generalTab: "通用",

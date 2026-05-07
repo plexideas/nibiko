@@ -12,7 +12,7 @@ final class MenuBarController: NSObject {
     private let captureService: QuickAddCaptureService
     private let localizer: Localizer
     private let showSettings: () -> Void
-    private let showAppInfo: () -> Void
+    private let requestQuit: () -> Void
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private let popover = NSPopover()
     private let popoverWidth: CGFloat = 340
@@ -28,7 +28,7 @@ final class MenuBarController: NSObject {
         captureService: QuickAddCaptureService,
         localizer: Localizer,
         showSettings: @escaping () -> Void,
-        showAppInfo: @escaping () -> Void
+        requestQuit: @escaping () -> Void
     ) {
         self.settingsStore = settingsStore
         self.recordListStore = recordListStore
@@ -38,7 +38,7 @@ final class MenuBarController: NSObject {
         self.captureService = captureService
         self.localizer = localizer
         self.showSettings = showSettings
-        self.showAppInfo = showAppInfo
+        self.requestQuit = requestQuit
     }
 
     func installStatusItem() {
@@ -65,9 +65,9 @@ final class MenuBarController: NSObject {
                     self?.popover.performClose(nil)
                     self?.showSettings()
                 },
-                showAppInfo: { [weak self] in
+                requestQuit: { [weak self] in
                     self?.popover.performClose(nil)
-                    self?.showAppInfo()
+                    self?.requestQuit()
                 }
             )
         )

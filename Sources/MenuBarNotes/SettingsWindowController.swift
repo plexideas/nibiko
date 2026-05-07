@@ -8,12 +8,14 @@ final class SettingsWindowController: NSWindowController {
         settingsStore: AppSettingsStore,
         hotkeyRegistrar: GlobalHotkeyRegistrar,
         calendarEventsStore: CalendarEventsStore,
+        appInfo: AppInfo,
         localizer: Localizer
     ) {
         let contentView = SettingsView(
             settingsStore: settingsStore,
             hotkeyRegistrar: hotkeyRegistrar,
             calendarEventsStore: calendarEventsStore,
+            appInfo: appInfo,
             localizer: localizer
         )
         let hostingController = NSHostingController(rootView: contentView)
@@ -37,6 +39,7 @@ struct SettingsView: View {
     @ObservedObject var settingsStore: AppSettingsStore
     @ObservedObject var hotkeyRegistrar: GlobalHotkeyRegistrar
     @ObservedObject var calendarEventsStore: CalendarEventsStore
+    let appInfo: AppInfo
     let localizer: Localizer
 
     var body: some View {
@@ -60,6 +63,9 @@ struct SettingsView: View {
                 localizer: localizer
             )
                 .tabItem { Text(localizer.string(.calendarTab)) }
+
+            AppInfoView(appInfo: appInfo, localizer: localizer)
+                .tabItem { Text(localizer.string(.appInfoButton)) }
         }
         .padding(16)
         .frame(width: 520, height: 390)

@@ -43,10 +43,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         captureService: quickAddCaptureService,
         localizer: localizer,
         showSettings: { [weak self] in self?.showSettings() },
-        showAppInfo: { [weak self] in self?.showAppInfo() }
+        requestQuit: { [weak self] in self?.confirmQuit() }
     )
     private var settingsWindowController: SettingsWindowController?
-    private var appInfoWindowController: AppInfoWindowController?
     private var settingsSubscription: AnyCancellable?
     private var recordsSubscription: AnyCancellable?
     private var pomodoroSessionSubscription: AnyCancellable?
@@ -95,6 +94,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 settingsStore: settingsStore,
                 hotkeyRegistrar: hotkeyRegistrar,
                 calendarEventsStore: calendarEventsStore,
+                appInfo: .current(),
                 localizer: localizer
             )
         }
@@ -103,16 +103,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settingsWindowController?.showWindow(nil)
     }
 
-    private func showAppInfo() {
-        if appInfoWindowController == nil {
-            appInfoWindowController = AppInfoWindowController(
-                appInfo: .current(),
-                localizer: localizer
-            )
-        }
-
+    private func confirmQuit() {
         NSApp.activate(ignoringOtherApps: true)
-        appInfoWindowController?.showWindow(nil)
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = localizer.string(.exitConfirmationTitle)
+        alert.informativeText = String(
+            format: localizer.string(.exitConfirmationMessage),
+            localizer.string(.appName)
+        )
+        alert.addButton(withTitle: localizer.string(.exitButton))
+        alert.addButton(withTitle: localizer.string(.cancelButton))
+
+        if alert.runModal() == .alertFirstButtonReturn {
+            NSApp.terminate(nil)
+        }
     }
 
     private func showQuickAddPanel() {

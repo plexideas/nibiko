@@ -61,6 +61,6 @@ struct AppInfoView: View {
             Spacer()
         }
         .padding(18)
-        .frame(width: 360, height: 220)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 }

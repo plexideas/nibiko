@@ -15,7 +15,7 @@ struct PopoverRootView: View {
 
     let localizer: Localizer
     let showSettings: () -> Void
-    let showAppInfo: () -> Void
+    let requestQuit: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -57,7 +57,7 @@ struct PopoverRootView: View {
             HStack(spacing: 8) {
                 Button(localizer.string(.settingsButton), action: showSettings)
                 Spacer()
-                Button(localizer.string(.appInfoButton), action: showAppInfo)
+                Button(localizer.string(.exitButton), action: requestQuit)
             }
             .controlSize(.small)
             .font(.system(size: 12))
