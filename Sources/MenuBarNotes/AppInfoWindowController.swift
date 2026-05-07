@@ -50,10 +50,12 @@ struct AppInfoView: View {
             LabeledContent(localizer.string(.buildLabel), value: appInfo.build)
                 .font(.system(size: 12))
             LabeledContent(localizer.string(.acknowledgementsLabel)) {
-                Text(appInfo.acknowledgements)
+                Text(localizer.acknowledgementsText(appInfo))
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.trailing)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             Spacer()

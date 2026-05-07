@@ -88,10 +88,13 @@ struct PopoverRootView: View {
             Text(localizer.string(.popoverSubtitle))
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
 
             Text(progress)
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(.secondary)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 2)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -99,16 +102,7 @@ struct PopoverRootView: View {
     }
 
     private var visibleCards: [MenuCard] {
-        settingsStore.settings.cardOrder.filter { card in
-            switch card {
-            case .notes:
-                return true
-            case .pomodoro:
-                return settingsStore.settings.isPomodoroCardVisible
-            case .calendar:
-                return settingsStore.settings.isCalendarCardVisible
-            }
-        }
+        MenuCardVisibility.visibleCards(from: settingsStore.settings)
     }
 }
 
@@ -121,6 +115,7 @@ private struct NotesTodosCard: View {
     @Binding var draftKind: RecordKind
     @Binding var draftReminderAt: Date
     @Binding var addError: String?
+    @FocusState private var isDraftFocused: Bool
 
     private var displayedRecords: [Record] {
         RecordDisplaySupport.recordsForDisplay(
@@ -137,16 +132,21 @@ private struct NotesTodosCard: View {
                 Text(notificationStatusText)
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             if recordListStore.lastErrorDescription != nil {
                 Text(localizer.string(.recordAddError))
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             } else if displayedRecords.isEmpty {
                 Text(emptyText)
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
             } else {
                 VStack(spacing: 6) {
@@ -162,9 +162,9 @@ private struct NotesTodosCard: View {
 
             VStack(alignment: .leading, spacing: 6) {
                 Picker("", selection: $draftKind) {
-                    Text(localizer.string(.addTodoButton)).tag(RecordKind.todo)
-                    Text(localizer.string(.addNoteButton)).tag(RecordKind.note)
-                    Text(localizer.string(.addReminderButton)).tag(RecordKind.reminder)
+                    Text(localizer.string(.todoKind)).tag(RecordKind.todo)
+                    Text(localizer.string(.noteKind)).tag(RecordKind.note)
+                    Text(localizer.string(.reminderKind)).tag(RecordKind.reminder)
                 }
                 .labelsHidden()
                 .pickerStyle(.segmented)
@@ -184,12 +184,14 @@ private struct NotesTodosCard: View {
                     TextField(localizer.string(.addRecordPlaceholder), text: $draftTitle)
                         .textFieldStyle(.roundedBorder)
                         .font(.system(size: 12))
+                        .focused($isDraftFocused)
                         .onSubmit(addRecord)
 
                     Button(action: addRecord) {
                         Image(systemName: "plus")
                     }
                     .help(addButtonHelp)
+                    .keyboardShortcut(.defaultAction)
                     .disabled(trimmedTitle.isEmpty || recordListStore.lastErrorDescription != nil)
                 }
                 .controlSize(.small)
@@ -198,11 +200,16 @@ private struct NotesTodosCard: View {
                     Text(addError)
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
         }
         .padding(10)
         .background(.quaternary.opacity(0.55), in: RoundedRectangle(cornerRadius: 8))
+        .onAppear {
+            isDraftFocused = true
+        }
     }
 
     private var emptyText: String {
@@ -232,7 +239,9 @@ private struct NotesTodosCard: View {
             return localizer.string(.notificationsDeniedStatus)
         case .unavailable:
             return localizer.string(.notificationsUnavailableStatus)
-        case .idle, .scheduled, .failed:
+        case .failed:
+            return localizer.string(.notificationsFailedStatus)
+        case .idle, .scheduled:
             return nil
         }
     }
@@ -335,7 +344,7 @@ private struct PomodoroCard: View {
 
             Picker(localizer.string(.pomodoroTemplateLabel), selection: selectedTemplateIDBinding) {
                 ForEach(settingsStore.settings.pomodoroTemplates) { template in
-                    Text(template.name).tag(template.id)
+                    Text(localizer.pomodoroTemplateName(template)).tag(template.id)
                 }
             }
             .labelsHidden()
@@ -485,7 +494,7 @@ private struct CalendarCard: View {
             } else {
                 VStack(spacing: 6) {
                     ForEach(calendarEventsStore.events) { event in
-                        CalendarEventRow(event: event)
+                        CalendarEventRow(event: event, localizer: localizer)
                     }
                 }
             }
@@ -496,6 +505,8 @@ private struct CalendarCard: View {
         Text(text)
             .font(.system(size: 12))
             .foregroundStyle(.secondary)
+            .lineLimit(3)
+            .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -517,6 +528,7 @@ private struct CalendarCard: View {
 
 private struct CalendarEventRow: View {
     let event: CalendarEvent
+    let localizer: Localizer
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -530,7 +542,7 @@ private struct CalendarEventRow: View {
             }
             .frame(width: 58, alignment: .leading)
 
-            Text(event.title)
+            Text(localizer.calendarEventTitle(event))
                 .font(.system(size: 12))
                 .lineLimit(2)
                 .frame(maxWidth: .infinity, alignment: .leading)

@@ -39,7 +39,7 @@ final class EventKitCalendarProvider: CalendarEventProviding {
             CalendarEvent(
                 id: event.eventIdentifier ?? "\(event.calendar.calendarIdentifier)-\(event.startDate.timeIntervalSince1970)",
                 sourceID: event.calendar.calendarIdentifier,
-                title: event.title ?? "Untitled Event",
+                title: event.title ?? CalendarEvent.fallbackTitle,
                 startsAt: event.startDate,
                 endsAt: event.endDate
             )

@@ -84,9 +84,11 @@ private struct NotesTodosSettingsView: View {
                     Text(localizer.string(.markdownStorageLocationHelp))
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
 
                     Button(localizer.string(.chooseMarkdownStorageLocation), action: chooseFolder)
                         .controlSize(.small)
+                        .keyboardShortcut("o", modifiers: [.command])
                 }
             }
 
@@ -95,7 +97,7 @@ private struct NotesTodosSettingsView: View {
                     Picker(localizer.string(.quickAddHotkeyLabel), selection: quickAddHotkeyBinding) {
                         Text(localizer.string(.quickAddHotkeyDisabled)).tag(HotkeyBinding.disabled)
                         ForEach(HotkeyBinding.configurableBindings) { binding in
-                            Text(binding.displayString).tag(binding)
+                            Text(localizer.hotkeyDisplayString(binding)).tag(binding)
                         }
                     }
                     .labelsHidden()
@@ -105,6 +107,8 @@ private struct NotesTodosSettingsView: View {
                     Text(statusText)
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
@@ -130,7 +134,7 @@ private struct NotesTodosSettingsView: View {
         case let .registered(binding):
             return String(
                 format: localizer.string(.quickAddHotkeyStatusRegistered),
-                binding.displayString
+                localizer.hotkeyDisplayString(binding)
             )
         case .conflict:
             return localizer.string(.quickAddHotkeyStatusConflict)
@@ -287,7 +291,10 @@ private struct PomodoroSettingsView: View {
         let templateNumber = settingsStore.settings.pomodoroTemplates.count + 1
         settingsStore.upsertPomodoroTemplate(
             PomodoroTemplate(
-                name: "Focus \(templateNumber)",
+                name: String(
+                    format: localizer.string(.pomodoroNewTemplateNameFormat),
+                    templateNumber
+                ),
                 focusDurationSeconds: PomodoroTemplate.defaultFocus.focusDurationSeconds
             )
         )
@@ -390,11 +397,14 @@ private struct CalendarSettingsView: View {
                     Text(permissionStatusText)
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
                     if calendarEventsStore.permissionState == .notDetermined {
                         Button(localizer.string(.calendarEnableAccess), action: requestAccess)
                             .controlSize(.small)
+                            .keyboardShortcut(.defaultAction)
                     } else if calendarEventsStore.permissionState == .allowed {
                         sourceList
 
@@ -419,7 +429,7 @@ private struct CalendarSettingsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 6) {
                     ForEach(calendarEventsStore.sources) { source in
-                        Toggle(source.title, isOn: sourceBinding(for: source))
+                        Toggle(localizer.calendarSourceTitle(source), isOn: sourceBinding(for: source))
                             .font(.system(size: 12))
                     }
                 }

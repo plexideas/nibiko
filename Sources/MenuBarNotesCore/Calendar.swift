@@ -9,17 +9,21 @@ public enum PermissionState: Equatable, Sendable {
 }
 
 public struct CalendarSource: Codable, Equatable, Hashable, Identifiable, Sendable {
+    public static let fallbackTitle = "Calendar"
+
     public var id: String
     public var title: String
 
     public init(id: String, title: String) {
         self.id = id.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        self.title = trimmedTitle.isEmpty ? "Calendar" : trimmedTitle
+        self.title = trimmedTitle.isEmpty ? Self.fallbackTitle : trimmedTitle
     }
 }
 
 public struct CalendarEvent: Codable, Equatable, Identifiable, Sendable {
+    public static let fallbackTitle = "Untitled Event"
+
     public var id: String
     public var sourceID: String
     public var title: String
@@ -30,7 +34,7 @@ public struct CalendarEvent: Codable, Equatable, Identifiable, Sendable {
         self.id = id
         self.sourceID = sourceID
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        self.title = trimmedTitle.isEmpty ? "Untitled Event" : trimmedTitle
+        self.title = trimmedTitle.isEmpty ? Self.fallbackTitle : trimmedTitle
         self.startsAt = startsAt
         self.endsAt = max(endsAt, startsAt)
     }

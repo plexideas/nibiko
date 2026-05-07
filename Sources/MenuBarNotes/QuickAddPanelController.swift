@@ -57,9 +57,9 @@ private struct QuickAddPanelView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Picker("", selection: $draftKind) {
-                Text(localizer.string(.addTodoButton)).tag(RecordKind.todo)
-                Text(localizer.string(.addNoteButton)).tag(RecordKind.note)
-                Text(localizer.string(.addReminderButton)).tag(RecordKind.reminder)
+                Text(localizer.string(.todoKind)).tag(RecordKind.todo)
+                Text(localizer.string(.noteKind)).tag(RecordKind.note)
+                Text(localizer.string(.reminderKind)).tag(RecordKind.reminder)
             }
             .labelsHidden()
             .pickerStyle(.segmented)
@@ -85,6 +85,8 @@ private struct QuickAddPanelView: View {
                 Text(errorText)
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             HStack {

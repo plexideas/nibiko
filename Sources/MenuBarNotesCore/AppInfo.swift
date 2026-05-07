@@ -1,6 +1,8 @@
 import Foundation
 
 public struct AppInfo: Equatable, Sendable {
+    public static let noThirdPartyRuntimeDependencies = "No third-party runtime dependencies."
+
     public var name: String
     public var version: String
     public var build: String
@@ -10,7 +12,7 @@ public struct AppInfo: Equatable, Sendable {
         name: String,
         version: String,
         build: String,
-        acknowledgements: String = "No third-party runtime dependencies."
+        acknowledgements: String = Self.noThirdPartyRuntimeDependencies
     ) {
         self.name = name
         self.version = version

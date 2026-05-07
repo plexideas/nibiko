@@ -49,6 +49,21 @@ public enum MenuCard: String, CaseIterable, Codable, Equatable, Identifiable, Se
     }
 }
 
+public enum MenuCardVisibility {
+    public static func visibleCards(from settings: AppSettings) -> [MenuCard] {
+        settings.cardOrder.filter { card in
+            switch card {
+            case .notes:
+                return true
+            case .pomodoro:
+                return settings.isPomodoroCardVisible
+            case .calendar:
+                return settings.isCalendarCardVisible
+            }
+        }
+    }
+}
+
 public struct AppSettings: Codable, Equatable, Sendable {
     public var appearanceMode: AppearanceMode
     public var cardOrder: [MenuCard]
@@ -237,6 +252,24 @@ public struct HotkeyModifiers: OptionSet, Codable, Equatable, Hashable, Sendable
         }
 
         return parts.map { "\($0)-" }.joined()
+    }
+
+    public var symbolDisplayString: String {
+        var parts: [String] = []
+        if contains(.control) {
+            parts.append("⌃")
+        }
+        if contains(.option) {
+            parts.append("⌥")
+        }
+        if contains(.shift) {
+            parts.append("⇧")
+        }
+        if contains(.command) {
+            parts.append("⌘")
+        }
+
+        return parts.joined()
     }
 }
 
