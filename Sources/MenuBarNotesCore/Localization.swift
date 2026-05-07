@@ -40,6 +40,17 @@ public enum LocalizationKey: String, CaseIterable, Sendable {
     case pomodoroRemoveTemplate
     case calendarCardTitle
     case calendarPlaceholder
+    case calendarVisibleLabel
+    case calendarEnableAccess
+    case calendarOpenFullApp
+    case calendarAccessNotDeterminedStatus
+    case calendarAccessDeniedStatus
+    case calendarAccessUnavailableStatus
+    case calendarLoadingStatus
+    case calendarNoEvents
+    case calendarSourcesLabel
+    case calendarNoSources
+    case calendarRefreshSources
     case settingsButton
     case appInfoButton
     case settingsTitle
@@ -139,6 +150,17 @@ public struct Localizer: Sendable {
         .pomodoroRemoveTemplate: "Remove Template",
         .calendarCardTitle: "Calendar",
         .calendarPlaceholder: "Upcoming events will appear here.",
+        .calendarVisibleLabel: "Show Calendar card",
+        .calendarEnableAccess: "Show Events",
+        .calendarOpenFullApp: "Open Calendar",
+        .calendarAccessNotDeterminedStatus: "Calendar access is off until you show events.",
+        .calendarAccessDeniedStatus: "Calendar access is denied. The rest of the app still works.",
+        .calendarAccessUnavailableStatus: "Calendar events are unavailable on this Mac.",
+        .calendarLoadingStatus: "Loading calendar events...",
+        .calendarNoEvents: "No upcoming events.",
+        .calendarSourcesLabel: "Calendar Sources",
+        .calendarNoSources: "No calendars are available.",
+        .calendarRefreshSources: "Refresh Calendars",
         .settingsButton: "Settings",
         .appInfoButton: "App Info",
         .settingsTitle: "Settings",

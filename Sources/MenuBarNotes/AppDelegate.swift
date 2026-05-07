@@ -16,6 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         selectedTemplate: selectedPomodoroTemplate(from: settingsStore.settings),
         currentSession: settingsStore.settings.currentPomodoroSession
     )
+    private lazy var calendarEventsStore = CalendarEventsStore(provider: EventKitCalendarProvider())
     private lazy var quickAddCaptureService = QuickAddCaptureService(
         recordListStore: recordListStore,
         scheduleReminder: { [weak self] record in
@@ -34,6 +35,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         recordListStore: recordListStore,
         reminderNotificationStore: reminderNotificationStore,
         pomodoroTimer: pomodoroTimer,
+        calendarEventsStore: calendarEventsStore,
         captureService: quickAddCaptureService,
         localizer: localizer,
         showSettings: { [weak self] in self?.showSettings() },
@@ -52,6 +54,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         applyAppearance(settingsStore.settings.appearanceMode)
         menuBarController.updateActiveCount(recordListStore.activeCount)
         hotkeyRegistrar.register(settingsStore.settings.quickAddHotkey)
+        refreshCalendarIfVisible(settingsStore.settings)
         lastPomodoroTemplates = settingsStore.settings.pomodoroTemplates
         lastSelectedPomodoroTemplateID = settingsStore.settings.selectedPomodoroTemplateID
 
@@ -60,6 +63,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.recordListStore.setDirectory(self?.markdownStorageURL(from: settings))
             self?.hotkeyRegistrar.register(settings.quickAddHotkey)
             self?.resetPomodoroTemplatesIfNeeded(from: settings)
+            self?.refreshCalendarIfVisible(settings)
         }
 
         recordsSubscription = recordListStore.$records.sink { [weak self] records in
@@ -85,6 +89,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             settingsWindowController = SettingsWindowController(
                 settingsStore: settingsStore,
                 hotkeyRegistrar: hotkeyRegistrar,
+                calendarEventsStore: calendarEventsStore,
                 localizer: localizer
             )
         }
@@ -147,5 +152,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             settings.pomodoroTemplates,
             selectedTemplateID: settings.selectedPomodoroTemplateID
         )
+    }
+
+    private func refreshCalendarIfVisible(_ settings: AppSettings) {
+        guard settings.isCalendarCardVisible else {
+            return
+        }
+
+        calendarEventsStore.refresh(selectedSourceIDs: settings.selectedCalendarSourceIDs)
     }
 }

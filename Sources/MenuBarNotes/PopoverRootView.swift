@@ -6,6 +6,7 @@ struct PopoverRootView: View {
     @ObservedObject var recordListStore: RecordListStore
     @ObservedObject var reminderNotificationStore: ReminderNotificationStore
     @ObservedObject var pomodoroTimer: PomodoroTimer
+    @ObservedObject var calendarEventsStore: CalendarEventsStore
     let captureService: QuickAddCaptureService
     @State private var draftTitle = ""
     @State private var draftKind: RecordKind = .todo
@@ -41,7 +42,11 @@ struct PopoverRootView: View {
                                 localizer: localizer
                             )
                         } else {
-                            PlaceholderCard(card: card, localizer: localizer)
+                            CalendarCard(
+                                settingsStore: settingsStore,
+                                calendarEventsStore: calendarEventsStore,
+                                localizer: localizer
+                            )
                         }
                     }
                 }
@@ -95,7 +100,14 @@ struct PopoverRootView: View {
 
     private var visibleCards: [MenuCard] {
         settingsStore.settings.cardOrder.filter { card in
-            card != .pomodoro || settingsStore.settings.isPomodoroCardVisible
+            switch card {
+            case .notes:
+                return true
+            case .pomodoro:
+                return settingsStore.settings.isPomodoroCardVisible
+            case .calendar:
+                return settingsStore.settings.isCalendarCardVisible
+            }
         }
     }
 }
@@ -423,21 +435,120 @@ private struct PomodoroCard: View {
     }
 }
 
-private struct PlaceholderCard: View {
-    let card: MenuCard
+private struct CalendarCard: View {
+    @ObservedObject var settingsStore: AppSettingsStore
+    @ObservedObject var calendarEventsStore: CalendarEventsStore
     let localizer: Localizer
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(localizer.string(card.titleKey))
-                .font(.system(size: 12, weight: .semibold))
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(localizer.string(.calendarCardTitle))
+                    .font(.system(size: 12, weight: .semibold))
+                Spacer()
+                Button(action: calendarEventsStore.openCalendar) {
+                    Image(systemName: "calendar")
+                }
+                .help(localizer.string(.calendarOpenFullApp))
+                .buttonStyle(.borderless)
+            }
 
-            Text(localizer.string(card.placeholderKey))
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            content
         }
         .padding(10)
         .background(.quaternary.opacity(0.55), in: RoundedRectangle(cornerRadius: 8))
+        .onAppear {
+            calendarEventsStore.refresh(selectedSourceIDs: settingsStore.settings.selectedCalendarSourceIDs)
+        }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        switch calendarEventsStore.permissionState {
+        case .notDetermined:
+            statusWithAction(
+                localizer.string(.calendarAccessNotDeterminedStatus),
+                actionTitle: localizer.string(.calendarEnableAccess),
+                action: requestCalendarAccess
+            )
+        case .denied:
+            statusText(localizer.string(.calendarAccessDeniedStatus))
+        case .unavailable:
+            statusText(localizer.string(.calendarAccessUnavailableStatus))
+        case .allowed:
+            if calendarEventsStore.isLoading {
+                statusText(localizer.string(.calendarLoadingStatus))
+            } else if calendarEventsStore.lastErrorDescription != nil {
+                statusText(localizer.string(.calendarAccessUnavailableStatus))
+            } else if calendarEventsStore.events.isEmpty {
+                statusText(localizer.string(.calendarNoEvents))
+            } else {
+                VStack(spacing: 6) {
+                    ForEach(calendarEventsStore.events) { event in
+                        CalendarEventRow(event: event)
+                    }
+                }
+            }
+        }
+    }
+
+    private func statusText(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 12))
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func statusWithAction(_ text: String, actionTitle: String, action: @escaping () -> Void) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            statusText(text)
+            Button(actionTitle, action: action)
+                .controlSize(.small)
+        }
+    }
+
+    private func requestCalendarAccess() {
+        calendarEventsStore.refresh(
+            selectedSourceIDs: settingsStore.settings.selectedCalendarSourceIDs,
+            requestPermissionIfNeeded: true
+        )
+    }
+}
+
+private struct CalendarEventRow: View {
+    let event: CalendarEvent
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(event.startsAt.formatted(date: .omitted, time: .shortened))
+                    .font(.system(size: 11, weight: .medium))
+                    .monospacedDigit()
+                Text(durationText)
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+            }
+            .frame(width: 58, alignment: .leading)
+
+            Text(event.title)
+                .font(.system(size: 12))
+                .lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var durationText: String {
+        let minutes = max(1, Int(event.durationSeconds / 60))
+        if minutes < 60 {
+            return "\(minutes)m"
+        }
+
+        let hours = minutes / 60
+        let remainingMinutes = minutes % 60
+        if remainingMinutes == 0 {
+            return "\(hours)h"
+        }
+
+        return "\(hours)h \(remainingMinutes)m"
     }
 }

@@ -58,6 +58,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var pomodoroTemplates: [PomodoroTemplate]
     public var selectedPomodoroTemplateID: String
     public var currentPomodoroSession: PomodoroSession?
+    public var isCalendarCardVisible: Bool
+    public var selectedCalendarSourceIDs: Set<String>?
 
     private enum CodingKeys: String, CodingKey {
         case appearanceMode
@@ -68,6 +70,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
         case pomodoroTemplates
         case selectedPomodoroTemplateID
         case currentPomodoroSession
+        case isCalendarCardVisible
+        case selectedCalendarSourceIDs
     }
 
     public init(
@@ -78,7 +82,9 @@ public struct AppSettings: Codable, Equatable, Sendable {
         isPomodoroCardVisible: Bool = true,
         pomodoroTemplates: [PomodoroTemplate] = PomodoroTemplate.defaultTemplates,
         selectedPomodoroTemplateID: String = PomodoroTemplate.defaultFocus.id,
-        currentPomodoroSession: PomodoroSession? = nil
+        currentPomodoroSession: PomodoroSession? = nil,
+        isCalendarCardVisible: Bool = true,
+        selectedCalendarSourceIDs: Set<String>? = nil
     ) {
         self.appearanceMode = appearanceMode
         self.cardOrder = MenuCard.normalizedOrder(from: cardOrder)
@@ -91,6 +97,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
             templates: self.pomodoroTemplates
         )
         self.currentPomodoroSession = currentPomodoroSession
+        self.isCalendarCardVisible = isCalendarCardVisible
+        self.selectedCalendarSourceIDs = CalendarDisplaySupport.normalizedSelectedSourceIDs(selectedCalendarSourceIDs)
     }
 
     public static let `default` = AppSettings()
@@ -116,6 +124,10 @@ public struct AppSettings: Codable, Equatable, Sendable {
             PomodoroSession.self,
             forKey: .currentPomodoroSession
         )
+        isCalendarCardVisible = try container.decodeIfPresent(Bool.self, forKey: .isCalendarCardVisible) ?? true
+        selectedCalendarSourceIDs = CalendarDisplaySupport.normalizedSelectedSourceIDs(
+            try container.decodeIfPresent(Set<String>.self, forKey: .selectedCalendarSourceIDs)
+        )
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -128,6 +140,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
         try container.encode(pomodoroTemplates, forKey: .pomodoroTemplates)
         try container.encode(selectedPomodoroTemplateID, forKey: .selectedPomodoroTemplateID)
         try container.encodeIfPresent(currentPomodoroSession, forKey: .currentPomodoroSession)
+        try container.encode(isCalendarCardVisible, forKey: .isCalendarCardVisible)
+        try container.encodeIfPresent(selectedCalendarSourceIDs, forKey: .selectedCalendarSourceIDs)
     }
 
     private static func normalizedSelectedPomodoroTemplateID(

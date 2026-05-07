@@ -75,6 +75,18 @@ public final class AppSettingsStore: ObservableObject {
         }
     }
 
+    public func setCalendarCardVisible(_ isVisible: Bool) {
+        update { settings in
+            settings.isCalendarCardVisible = isVisible
+        }
+    }
+
+    public func setSelectedCalendarSourceIDs(_ sourceIDs: Set<String>?) {
+        update { settings in
+            settings.selectedCalendarSourceIDs = sourceIDs
+        }
+    }
+
     public func setSelectedPomodoroTemplateID(_ templateID: String) {
         update { settings in
             guard settings.pomodoroTemplates.contains(where: { $0.id == templateID }) else {
@@ -150,6 +162,9 @@ public final class AppSettingsStore: ObservableObject {
         if !nextSettings.pomodoroTemplates.contains(where: { $0.id == nextSettings.selectedPomodoroTemplateID }) {
             nextSettings.selectedPomodoroTemplateID = nextSettings.pomodoroTemplates[0].id
         }
+        nextSettings.selectedCalendarSourceIDs = CalendarDisplaySupport.normalizedSelectedSourceIDs(
+            nextSettings.selectedCalendarSourceIDs
+        )
         settings = nextSettings
 
         do {

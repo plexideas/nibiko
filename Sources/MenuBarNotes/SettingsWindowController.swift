@@ -7,11 +7,13 @@ final class SettingsWindowController: NSWindowController {
     init(
         settingsStore: AppSettingsStore,
         hotkeyRegistrar: GlobalHotkeyRegistrar,
+        calendarEventsStore: CalendarEventsStore,
         localizer: Localizer
     ) {
         let contentView = SettingsView(
             settingsStore: settingsStore,
             hotkeyRegistrar: hotkeyRegistrar,
+            calendarEventsStore: calendarEventsStore,
             localizer: localizer
         )
         let hostingController = NSHostingController(rootView: contentView)
@@ -34,6 +36,7 @@ final class SettingsWindowController: NSWindowController {
 struct SettingsView: View {
     @ObservedObject var settingsStore: AppSettingsStore
     @ObservedObject var hotkeyRegistrar: GlobalHotkeyRegistrar
+    @ObservedObject var calendarEventsStore: CalendarEventsStore
     let localizer: Localizer
 
     var body: some View {
@@ -51,7 +54,11 @@ struct SettingsView: View {
             PomodoroSettingsView(settingsStore: settingsStore, localizer: localizer)
                 .tabItem { Text(localizer.string(.pomodoroTab)) }
 
-            PlaceholderSettingsTab(localizer: localizer)
+            CalendarSettingsView(
+                settingsStore: settingsStore,
+                calendarEventsStore: calendarEventsStore,
+                localizer: localizer
+            )
                 .tabItem { Text(localizer.string(.calendarTab)) }
         }
         .padding(16)
@@ -350,13 +357,124 @@ private struct PomodoroTemplateSettingsRow: View {
     }
 }
 
-private struct PlaceholderSettingsTab: View {
+private struct CalendarSettingsView: View {
+    @ObservedObject var settingsStore: AppSettingsStore
+    @ObservedObject var calendarEventsStore: CalendarEventsStore
     let localizer: Localizer
 
     var body: some View {
-        Text(localizer.string(.featureComingSoon))
-            .font(.system(size: 13))
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        Form {
+            Toggle(localizer.string(.calendarVisibleLabel), isOn: visibilityBinding)
+
+            Section(localizer.string(.calendarSourcesLabel)) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(permissionStatusText)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    if calendarEventsStore.permissionState == .notDetermined {
+                        Button(localizer.string(.calendarEnableAccess), action: requestAccess)
+                            .controlSize(.small)
+                    } else if calendarEventsStore.permissionState == .allowed {
+                        sourceList
+
+                        Button(localizer.string(.calendarRefreshSources), action: refreshSources)
+                            .controlSize(.small)
+                    }
+                }
+            }
+        }
+        .formStyle(.grouped)
+        .onAppear(perform: refreshSources)
+    }
+
+    @ViewBuilder
+    private var sourceList: some View {
+        if calendarEventsStore.sources.isEmpty {
+            Text(localizer.string(.calendarNoSources))
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(calendarEventsStore.sources) { source in
+                        Toggle(source.title, isOn: sourceBinding(for: source))
+                            .font(.system(size: 12))
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+            .frame(maxHeight: 165)
+        }
+    }
+
+    private var visibilityBinding: Binding<Bool> {
+        Binding(
+            get: { settingsStore.settings.isCalendarCardVisible },
+            set: { isVisible in
+                settingsStore.setCalendarCardVisible(isVisible)
+                guard isVisible else {
+                    return
+                }
+
+                calendarEventsStore.refresh(
+                    selectedSourceIDs: settingsStore.settings.selectedCalendarSourceIDs,
+                    requestPermissionIfNeeded: true
+                )
+            }
+        )
+    }
+
+    private var permissionStatusText: String {
+        switch calendarEventsStore.permissionState {
+        case .notDetermined:
+            return localizer.string(.calendarAccessNotDeterminedStatus)
+        case .allowed:
+            return calendarEventsStore.isLoading
+                ? localizer.string(.calendarLoadingStatus)
+                : localizer.string(.calendarPlaceholder)
+        case .denied:
+            return localizer.string(.calendarAccessDeniedStatus)
+        case .unavailable:
+            return localizer.string(.calendarAccessUnavailableStatus)
+        }
+    }
+
+    private func sourceBinding(for source: CalendarSource) -> Binding<Bool> {
+        Binding(
+            get: {
+                selectedSourceIDs.contains(source.id)
+            },
+            set: { isSelected in
+                var nextSelection = selectedSourceIDs
+                if isSelected {
+                    nextSelection.insert(source.id)
+                } else {
+                    nextSelection.remove(source.id)
+                }
+                settingsStore.setSelectedCalendarSourceIDs(nextSelection)
+                refreshSources()
+            }
+        )
+    }
+
+    private var selectedSourceIDs: Set<String> {
+        CalendarDisplaySupport.selectedSourceIDs(
+            from: settingsStore.settings.selectedCalendarSourceIDs,
+            availableSources: calendarEventsStore.sources
+        )
+    }
+
+    private func requestAccess() {
+        calendarEventsStore.refresh(
+            selectedSourceIDs: settingsStore.settings.selectedCalendarSourceIDs,
+            requestPermissionIfNeeded: true
+        )
+    }
+
+    private func refreshSources() {
+        calendarEventsStore.refresh(selectedSourceIDs: settingsStore.settings.selectedCalendarSourceIDs)
     }
 }

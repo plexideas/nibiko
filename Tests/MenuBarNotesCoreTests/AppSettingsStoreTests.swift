@@ -17,6 +17,8 @@ struct AppSettingsStoreTests {
         #expect(store.settings.pomodoroTemplates == PomodoroTemplate.defaultTemplates)
         #expect(store.settings.selectedPomodoroTemplateID == PomodoroTemplate.defaultFocus.id)
         #expect(store.settings.currentPomodoroSession == nil)
+        #expect(store.settings.isCalendarCardVisible)
+        #expect(store.settings.selectedCalendarSourceIDs == nil)
     }
 
     @Test("appearance changes persist across store recreation")
@@ -116,6 +118,32 @@ struct AppSettingsStoreTests {
         #expect(reloadedStore.settings.currentPomodoroSession == session)
     }
 
+    @Test("Calendar visibility changes persist without deleting selected sources")
+    func persistsCalendarVisibilityWithoutDeletingSources() {
+        let defaults = isolatedDefaults()
+        let persistence = UserDefaultsSettingsPersistence(defaults: defaults)
+        let store = AppSettingsStore(persistence: persistence)
+
+        store.setSelectedCalendarSourceIDs(["work", "home"])
+        store.setCalendarCardVisible(false)
+
+        let reloadedStore = AppSettingsStore(persistence: persistence)
+        #expect(!reloadedStore.settings.isCalendarCardVisible)
+        #expect(reloadedStore.settings.selectedCalendarSourceIDs == Set(["work", "home"]))
+    }
+
+    @Test("Calendar source selection changes persist across store recreation")
+    func persistsCalendarSourceSelection() {
+        let defaults = isolatedDefaults()
+        let persistence = UserDefaultsSettingsPersistence(defaults: defaults)
+        let store = AppSettingsStore(persistence: persistence)
+
+        store.setSelectedCalendarSourceIDs(["work"])
+
+        let reloadedStore = AppSettingsStore(persistence: persistence)
+        #expect(reloadedStore.settings.selectedCalendarSourceIDs == Set(["work"]))
+    }
+
     @Test("removing the selected Pomodoro template selects a remaining template")
     func removingSelectedPomodoroTemplateSelectsRemainingTemplate() {
         let defaults = isolatedDefaults()
@@ -167,6 +195,8 @@ struct AppSettingsStoreTests {
         #expect(settings.pomodoroTemplates == PomodoroTemplate.defaultTemplates)
         #expect(settings.selectedPomodoroTemplateID == PomodoroTemplate.defaultFocus.id)
         #expect(settings.currentPomodoroSession == nil)
+        #expect(settings.isCalendarCardVisible)
+        #expect(settings.selectedCalendarSourceIDs == nil)
     }
 
     @Test("card order normalization preserves every Phase 1 card once")

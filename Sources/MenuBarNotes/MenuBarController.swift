@@ -8,6 +8,7 @@ final class MenuBarController: NSObject {
     private let recordListStore: RecordListStore
     private let reminderNotificationStore: ReminderNotificationStore
     private let pomodoroTimer: PomodoroTimer
+    private let calendarEventsStore: CalendarEventsStore
     private let captureService: QuickAddCaptureService
     private let localizer: Localizer
     private let showSettings: () -> Void
@@ -20,6 +21,7 @@ final class MenuBarController: NSObject {
         recordListStore: RecordListStore,
         reminderNotificationStore: ReminderNotificationStore,
         pomodoroTimer: PomodoroTimer,
+        calendarEventsStore: CalendarEventsStore,
         captureService: QuickAddCaptureService,
         localizer: Localizer,
         showSettings: @escaping () -> Void,
@@ -29,6 +31,7 @@ final class MenuBarController: NSObject {
         self.recordListStore = recordListStore
         self.reminderNotificationStore = reminderNotificationStore
         self.pomodoroTimer = pomodoroTimer
+        self.calendarEventsStore = calendarEventsStore
         self.captureService = captureService
         self.localizer = localizer
         self.showSettings = showSettings
@@ -53,6 +56,7 @@ final class MenuBarController: NSObject {
                 recordListStore: recordListStore,
                 reminderNotificationStore: reminderNotificationStore,
                 pomodoroTimer: pomodoroTimer,
+                calendarEventsStore: calendarEventsStore,
                 captureService: captureService,
                 localizer: localizer,
                 showSettings: { [weak self] in
