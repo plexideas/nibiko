@@ -31,7 +31,7 @@ struct LocalizationTests {
 
     @Test("unsupported languages fall back to English")
     func unsupportedLanguagesFallBackToEnglish() {
-        let localizer = Localizer(preferredLanguageIdentifiers: ["fr-FR", "es-ES"])
+        let localizer = Localizer(preferredLanguageIdentifiers: ["fr-FR", "sr-Hans", "es-ES"])
 
         #expect(localizer.language == .english)
         #expect(localizer.string(.appearanceSystem) == "System")

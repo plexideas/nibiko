@@ -108,7 +108,6 @@ public enum SupportedLanguage: String, CaseIterable, Sendable {
     public static func resolve(from preferredLanguageIdentifiers: [String]) -> SupportedLanguage {
         for identifier in preferredLanguageIdentifiers {
             let languageCode = Locale(identifier: identifier).language.languageCode?.identifier
-            let scriptCode = Locale(identifier: identifier).language.script?.identifier
             if languageCode == english.rawValue {
                 return .english
             }
@@ -118,7 +117,7 @@ public enum SupportedLanguage: String, CaseIterable, Sendable {
             if languageCode == korean.rawValue {
                 return .korean
             }
-            if languageCode == "zh" || scriptCode == "Hans" {
+            if languageCode == "zh" {
                 return .chineseSimplified
             }
         }
