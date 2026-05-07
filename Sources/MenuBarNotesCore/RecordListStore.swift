@@ -122,16 +122,24 @@ public final class RecordListStore: ObservableObject {
             eventMask: [.write, .delete, .rename, .attrib, .extend],
             queue: watchQueue
         )
-        source.setEventHandler { [weak self] in
-            Task { @MainActor in
-                self?.reload()
-            }
-        }
-        source.setCancelHandler {
-            close(descriptor)
-        }
+        source.setEventHandler(handler: Self.directoryEventHandler(for: self))
+        source.setCancelHandler(handler: Self.directoryCancelHandler(for: descriptor))
         watcher = source
         source.resume()
+    }
+
+    nonisolated private static func directoryEventHandler(for store: RecordListStore) -> @Sendable () -> Void {
+        { [weak store] in
+            Task { @MainActor in
+                store?.reload()
+            }
+        }
+    }
+
+    nonisolated private static func directoryCancelHandler(for descriptor: Int32) -> @Sendable () -> Void {
+        {
+            close(descriptor)
+        }
     }
 }
 

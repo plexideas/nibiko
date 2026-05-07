@@ -108,6 +108,32 @@ struct MarkdownRecordsStoreTests {
         #expect(listStore.records.map(\.title) == ["Edited from another editor"])
     }
 
+    @MainActor
+    @Test("directory watcher reloads externally added records")
+    func directoryWatcherReloadsExternallyAddedRecords() async throws {
+        let directory = try temporaryDirectory()
+        let store = MarkdownRecordsStore()
+        let listStore = RecordListStore(directory: directory, storage: store)
+
+        let record = try store.addRecord(RecordDraft(kind: .note, title: "Watched note"), in: directory)
+        await waitUntil {
+            listStore.records.contains { $0.id == record.id }
+        }
+
+        #expect(listStore.records.map(\.title).contains("Watched note"))
+    }
+
+    @MainActor
+    private func waitUntil(
+        timeout: TimeInterval = 2,
+        condition: @MainActor () -> Bool
+    ) async {
+        let deadline = Date().addingTimeInterval(timeout)
+        while !condition(), Date() < deadline {
+            try? await Task.sleep(nanoseconds: 20_000_000)
+        }
+    }
+
     private func temporaryDirectory() throws -> URL {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("MenuBarNotesTests-\(UUID().uuidString)", isDirectory: true)
