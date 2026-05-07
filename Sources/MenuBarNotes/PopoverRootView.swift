@@ -115,8 +115,8 @@ private struct NotesTodosCard: View {
     @Binding var addError: String?
     @FocusState private var isDraftFocused: Bool
     private let maximumVisibleRows = 5
-    private let recordRowHeight: CGFloat = 34
-    private let recordRowSpacing: CGFloat = 6
+    private let recordRowHeight: CGFloat = 24
+    private let recordRowSpacing: CGFloat = 3
 
     private var displayedRecords: [Record] {
         RecordDisplaySupport.recordsForDisplay(
@@ -217,7 +217,7 @@ private struct NotesTodosCard: View {
     }
 
     private var recordRows: some View {
-        LazyVStack(spacing: recordRowSpacing) {
+        VStack(spacing: recordRowSpacing) {
             ForEach(displayedRecords) { record in
                 RecordRow(record: record, localizer: localizer) {
                     try? recordListStore.completeRecord(id: record.id)
@@ -308,10 +308,12 @@ private struct RecordRow: View {
                     Image(systemName: record.status == .completed ? "checkmark.circle.fill" : "circle")
                 }
                 .buttonStyle(.borderless)
+                .controlSize(.small)
                 .help(completeHelpText)
                 .disabled(record.status == .completed)
             } else {
                 Image(systemName: "note.text")
+                    .font(.system(size: 12))
                     .foregroundStyle(.secondary)
             }
 
