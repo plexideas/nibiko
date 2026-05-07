@@ -6,6 +6,11 @@ public protocol SettingsPersistence {
     func saveSettings(_ settings: AppSettings) throws
 }
 
+@MainActor
+public protocol LaunchAtLoginServicing: AnyObject {
+    func setLaunchAtLoginEnabled(_ isEnabled: Bool) throws
+}
+
 public struct UserDefaultsSettingsPersistence: SettingsPersistence {
     private let defaults: UserDefaults
     private let key: String
@@ -34,13 +39,16 @@ public final class AppSettingsStore: ObservableObject {
     @Published public private(set) var settings: AppSettings
 
     private let persistence: SettingsPersistence
+    private let launchAtLoginService: (any LaunchAtLoginServicing)?
     private let errorHandler: @MainActor (Error) -> Void
 
     public init(
         persistence: SettingsPersistence = UserDefaultsSettingsPersistence(),
+        launchAtLoginService: (any LaunchAtLoginServicing)? = nil,
         errorHandler: @escaping @MainActor (Error) -> Void = { _ in }
     ) {
         self.persistence = persistence
+        self.launchAtLoginService = launchAtLoginService
         self.errorHandler = errorHandler
 
         do {
@@ -78,6 +86,27 @@ public final class AppSettingsStore: ObservableObject {
     public func setCalendarCardVisible(_ isVisible: Bool) {
         update { settings in
             settings.isCalendarCardVisible = isVisible
+        }
+    }
+
+    public func setAutomaticUpdatesEnabled(_ isEnabled: Bool) {
+        update { settings in
+            settings.automaticUpdatesEnabled = isEnabled
+        }
+    }
+
+    public func setLaunchAtLoginEnabled(_ isEnabled: Bool) {
+        update { settings in
+            settings.launchAtLoginEnabled = isEnabled
+        }
+        applyLaunchAtLoginPreference()
+    }
+
+    public func applyLaunchAtLoginPreference() {
+        do {
+            try launchAtLoginService?.setLaunchAtLoginEnabled(settings.launchAtLoginEnabled)
+        } catch {
+            errorHandler(error)
         }
     }
 

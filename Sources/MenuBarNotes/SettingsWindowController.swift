@@ -20,7 +20,7 @@ final class SettingsWindowController: NSWindowController {
         let window = NSWindow(contentViewController: hostingController)
         window.title = localizer.string(.settingsTitle)
         window.styleMask = [.titled, .closable, .miniaturizable]
-        window.setContentSize(NSSize(width: 520, height: 360))
+        window.setContentSize(NSSize(width: 520, height: 390))
         window.center()
 
         super.init(window: window)
@@ -62,7 +62,7 @@ struct SettingsView: View {
                 .tabItem { Text(localizer.string(.calendarTab)) }
         }
         .padding(16)
-        .frame(width: 520, height: 360)
+        .frame(width: 520, height: 390)
     }
 }
 
@@ -179,6 +179,11 @@ private struct GeneralSettingsView: View {
                     }
                 }
             }
+
+            Section {
+                Toggle(localizer.string(.automaticUpdatesLabel), isOn: automaticUpdatesBinding)
+                Toggle(localizer.string(.launchAtLoginLabel), isOn: launchAtLoginBinding)
+            }
         }
         .formStyle(.grouped)
     }
@@ -187,6 +192,20 @@ private struct GeneralSettingsView: View {
         Binding(
             get: { settingsStore.settings.appearanceMode },
             set: { settingsStore.setAppearanceMode($0) }
+        )
+    }
+
+    private var automaticUpdatesBinding: Binding<Bool> {
+        Binding(
+            get: { settingsStore.settings.automaticUpdatesEnabled },
+            set: { settingsStore.setAutomaticUpdatesEnabled($0) }
+        )
+    }
+
+    private var launchAtLoginBinding: Binding<Bool> {
+        Binding(
+            get: { settingsStore.settings.launchAtLoginEnabled },
+            set: { settingsStore.setLaunchAtLoginEnabled($0) }
         )
     }
 }

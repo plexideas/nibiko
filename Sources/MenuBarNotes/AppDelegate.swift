@@ -5,9 +5,13 @@ import MenuBarNotesCore
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let localizer = Localizer()
-    private lazy var settingsStore = AppSettingsStore(errorHandler: { error in
-        NSLog("Menu Bar Notes settings error: \(error.localizedDescription)")
-    })
+    private let launchAtLoginService = MacOSLaunchAtLoginService()
+    private lazy var settingsStore = AppSettingsStore(
+        launchAtLoginService: launchAtLoginService,
+        errorHandler: { error in
+            NSLog("Menu Bar Notes settings error: \(error.localizedDescription)")
+        }
+    )
     private lazy var recordListStore = RecordListStore(directory: markdownStorageURL(from: settingsStore.settings))
     private lazy var reminderNotificationStore = ReminderNotificationStore(
         scheduler: UserNotificationReminderScheduler()
@@ -54,6 +58,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         applyAppearance(settingsStore.settings.appearanceMode)
         menuBarController.updateActiveCount(recordListStore.activeCount)
         hotkeyRegistrar.register(settingsStore.settings.quickAddHotkey)
+        settingsStore.applyLaunchAtLoginPreference()
         refreshCalendarIfVisible(settingsStore.settings)
         lastPomodoroTemplates = settingsStore.settings.pomodoroTemplates
         lastSelectedPomodoroTemplateID = settingsStore.settings.selectedPomodoroTemplateID

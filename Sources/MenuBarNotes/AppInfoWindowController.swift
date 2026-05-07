@@ -10,7 +10,7 @@ final class AppInfoWindowController: NSWindowController {
         let window = NSWindow(contentViewController: hostingController)
         window.title = localizer.string(.appInfoTitle)
         window.styleMask = [.titled, .closable]
-        window.setContentSize(NSSize(width: 340, height: 180))
+        window.setContentSize(NSSize(width: 360, height: 220))
         window.center()
 
         super.init(window: window)
@@ -49,10 +49,16 @@ struct AppInfoView: View {
                 .font(.system(size: 12))
             LabeledContent(localizer.string(.buildLabel), value: appInfo.build)
                 .font(.system(size: 12))
+            LabeledContent(localizer.string(.acknowledgementsLabel)) {
+                Text(appInfo.acknowledgements)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.trailing)
+            }
 
             Spacer()
         }
         .padding(18)
-        .frame(width: 340, height: 180)
+        .frame(width: 360, height: 220)
     }
 }

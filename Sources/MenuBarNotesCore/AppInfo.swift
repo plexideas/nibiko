@@ -4,11 +4,18 @@ public struct AppInfo: Equatable, Sendable {
     public var name: String
     public var version: String
     public var build: String
+    public var acknowledgements: String
 
-    public init(name: String, version: String, build: String) {
+    public init(
+        name: String,
+        version: String,
+        build: String,
+        acknowledgements: String = "No third-party runtime dependencies."
+    ) {
         self.name = name
         self.version = version
         self.build = build
+        self.acknowledgements = acknowledgements
     }
 
     public static func current(bundle: Bundle = .main, fallbackName: String = "Menu Bar Notes") -> AppInfo {

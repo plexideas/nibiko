@@ -19,6 +19,8 @@ struct AppSettingsStoreTests {
         #expect(store.settings.currentPomodoroSession == nil)
         #expect(store.settings.isCalendarCardVisible)
         #expect(store.settings.selectedCalendarSourceIDs == nil)
+        #expect(!store.settings.automaticUpdatesEnabled)
+        #expect(!store.settings.launchAtLoginEnabled)
     }
 
     @Test("appearance changes persist across store recreation")
@@ -144,6 +146,53 @@ struct AppSettingsStoreTests {
         #expect(reloadedStore.settings.selectedCalendarSourceIDs == Set(["work"]))
     }
 
+    @Test("automatic-update preference changes persist across store recreation")
+    func persistsAutomaticUpdatesPreference() {
+        let defaults = isolatedDefaults()
+        let persistence = UserDefaultsSettingsPersistence(defaults: defaults)
+        let store = AppSettingsStore(persistence: persistence)
+
+        store.setAutomaticUpdatesEnabled(true)
+
+        let reloadedStore = AppSettingsStore(persistence: persistence)
+        #expect(reloadedStore.settings.automaticUpdatesEnabled)
+    }
+
+    @Test("launch-at-login preference persists and applies through lifecycle service")
+    func persistsAndAppliesLaunchAtLoginPreference() {
+        let defaults = isolatedDefaults()
+        let persistence = UserDefaultsSettingsPersistence(defaults: defaults)
+        let launchAtLoginService = FakeLaunchAtLoginService()
+        let store = AppSettingsStore(
+            persistence: persistence,
+            launchAtLoginService: launchAtLoginService
+        )
+
+        store.setLaunchAtLoginEnabled(true)
+        store.setLaunchAtLoginEnabled(false)
+
+        let reloadedStore = AppSettingsStore(persistence: persistence)
+        #expect(!reloadedStore.settings.launchAtLoginEnabled)
+        #expect(launchAtLoginService.appliedValues == [true, false])
+    }
+
+    @Test("launch-at-login service errors are reported without dropping the persisted preference")
+    func reportsLaunchAtLoginServiceErrors() {
+        let defaults = isolatedDefaults()
+        let launchAtLoginService = FakeLaunchAtLoginService(error: TestLaunchAtLoginError.failed)
+        var receivedError: Error?
+        let store = AppSettingsStore(
+            persistence: UserDefaultsSettingsPersistence(defaults: defaults),
+            launchAtLoginService: launchAtLoginService,
+            errorHandler: { receivedError = $0 }
+        )
+
+        store.setLaunchAtLoginEnabled(true)
+
+        #expect(store.settings.launchAtLoginEnabled)
+        #expect(receivedError is TestLaunchAtLoginError)
+    }
+
     @Test("removing the selected Pomodoro template selects a remaining template")
     func removingSelectedPomodoroTemplateSelectsRemainingTemplate() {
         let defaults = isolatedDefaults()
@@ -197,6 +246,8 @@ struct AppSettingsStoreTests {
         #expect(settings.currentPomodoroSession == nil)
         #expect(settings.isCalendarCardVisible)
         #expect(settings.selectedCalendarSourceIDs == nil)
+        #expect(!settings.automaticUpdatesEnabled)
+        #expect(!settings.launchAtLoginEnabled)
     }
 
     @Test("card order normalization preserves every Phase 1 card once")
@@ -212,4 +263,25 @@ struct AppSettingsStoreTests {
         defaults.removePersistentDomain(forName: suiteName)
         return defaults
     }
+}
+
+@MainActor
+private final class FakeLaunchAtLoginService: LaunchAtLoginServicing {
+    private let error: Error?
+    private(set) var appliedValues: [Bool] = []
+
+    init(error: Error? = nil) {
+        self.error = error
+    }
+
+    func setLaunchAtLoginEnabled(_ isEnabled: Bool) throws {
+        appliedValues.append(isEnabled)
+        if let error {
+            throw error
+        }
+    }
+}
+
+private enum TestLaunchAtLoginError: Error {
+    case failed
 }

@@ -63,6 +63,8 @@ public enum LocalizationKey: String, CaseIterable, Sendable {
     case appearanceLight
     case appearanceDark
     case cardOrderLabel
+    case automaticUpdatesLabel
+    case launchAtLoginLabel
     case markdownStorageLocationLabel
     case chooseMarkdownStorageLocation
     case markdownStorageLocationHelp
@@ -81,6 +83,7 @@ public enum LocalizationKey: String, CaseIterable, Sendable {
     case appInfoTitle
     case versionLabel
     case buildLabel
+    case acknowledgementsLabel
     case close
 }
 
@@ -173,6 +176,8 @@ public struct Localizer: Sendable {
         .appearanceLight: "Light",
         .appearanceDark: "Dark",
         .cardOrderLabel: "Card Order",
+        .automaticUpdatesLabel: "Automatic Updates",
+        .launchAtLoginLabel: "Launch at Login",
         .markdownStorageLocationLabel: "Markdown Storage Location",
         .chooseMarkdownStorageLocation: "Choose Folder...",
         .markdownStorageLocationHelp: "Notes and todos are saved as Markdown files in this folder.",
@@ -191,6 +196,7 @@ public struct Localizer: Sendable {
         .appInfoTitle: "App Information",
         .versionLabel: "Version",
         .buildLabel: "Build",
+        .acknowledgementsLabel: "Acknowledgements",
         .close: "Close"
     ]
 }
