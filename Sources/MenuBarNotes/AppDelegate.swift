@@ -8,8 +8,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var settingsStore = AppSettingsStore(errorHandler: { error in
         NSLog("Menu Bar Notes settings error: \(error.localizedDescription)")
     })
+    private lazy var recordListStore = RecordListStore(directory: markdownStorageURL(from: settingsStore.settings))
     private lazy var menuBarController = MenuBarController(
         settingsStore: settingsStore,
+        recordListStore: recordListStore,
         localizer: localizer,
         showSettings: { [weak self] in self?.showSettings() },
         showAppInfo: { [weak self] in self?.showAppInfo() }
@@ -17,13 +19,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var settingsWindowController: SettingsWindowController?
     private var appInfoWindowController: AppInfoWindowController?
     private var settingsSubscription: AnyCancellable?
+    private var recordsSubscription: AnyCancellable?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         menuBarController.installStatusItem()
         applyAppearance(settingsStore.settings.appearanceMode)
+        menuBarController.updateActiveCount(recordListStore.activeCount)
 
         settingsSubscription = settingsStore.$settings.sink { [weak self] settings in
             self?.applyAppearance(settings.appearanceMode)
+            self?.recordListStore.setDirectory(self?.markdownStorageURL(from: settings))
+        }
+
+        recordsSubscription = recordListStore.$records.sink { [weak self] records in
+            self?.menuBarController.updateActiveCount(ActiveRecordCounter.count(records))
         }
     }
 
@@ -64,5 +73,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case .dark:
             NSApp.appearance = NSAppearance(named: .darkAqua)
         }
+    }
+
+    private func markdownStorageURL(from settings: AppSettings) -> URL? {
+        guard let path = settings.markdownStorageDirectory else {
+            return nil
+        }
+
+        return URL(fileURLWithPath: path, isDirectory: true)
     }
 }

@@ -32,7 +32,7 @@ struct SettingsView: View {
             GeneralSettingsView(settingsStore: settingsStore, localizer: localizer)
                 .tabItem { Text(localizer.string(.generalTab)) }
 
-            PlaceholderSettingsTab(localizer: localizer)
+            NotesTodosSettingsView(settingsStore: settingsStore, localizer: localizer)
                 .tabItem { Text(localizer.string(.notesTodosTab)) }
 
             PlaceholderSettingsTab(localizer: localizer)
@@ -43,6 +43,50 @@ struct SettingsView: View {
         }
         .padding(16)
         .frame(width: 520, height: 360)
+    }
+}
+
+private struct NotesTodosSettingsView: View {
+    @ObservedObject var settingsStore: AppSettingsStore
+    let localizer: Localizer
+
+    var body: some View {
+        Form {
+            Section(localizer.string(.markdownStorageLocationLabel)) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(selectedPath)
+                        .font(.system(size: 12))
+                        .foregroundStyle(settingsStore.settings.markdownStorageDirectory == nil ? .secondary : .primary)
+                        .lineLimit(2)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    Text(localizer.string(.markdownStorageLocationHelp))
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+
+                    Button(localizer.string(.chooseMarkdownStorageLocation), action: chooseFolder)
+                        .controlSize(.small)
+                }
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    private var selectedPath: String {
+        settingsStore.settings.markdownStorageDirectory ?? localizer.string(.noStorageLocation)
+    }
+
+    private func chooseFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.canCreateDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.prompt = localizer.string(.chooseMarkdownStorageLocation)
+
+        if panel.runModal() == .OK, let url = panel.url {
+            settingsStore.setMarkdownStorageDirectory(url.path)
+        }
     }
 }
 

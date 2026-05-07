@@ -57,6 +57,12 @@ public final class AppSettingsStore: ObservableObject {
         }
     }
 
+    public func setMarkdownStorageDirectory(_ directory: String?) {
+        update { settings in
+            settings.markdownStorageDirectory = directory
+        }
+    }
+
     public func moveCard(_ card: MenuCard, direction: CardMoveDirection) {
         update { settings in
             guard let index = settings.cardOrder.firstIndex(of: card) else {
@@ -84,6 +90,11 @@ public final class AppSettingsStore: ObservableObject {
         var nextSettings = settings
         mutation(&nextSettings)
         nextSettings.cardOrder = MenuCard.normalizedOrder(from: nextSettings.cardOrder)
+        nextSettings.markdownStorageDirectory = nextSettings.markdownStorageDirectory?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if nextSettings.markdownStorageDirectory?.isEmpty == true {
+            nextSettings.markdownStorageDirectory = nil
+        }
         settings = nextSettings
 
         do {

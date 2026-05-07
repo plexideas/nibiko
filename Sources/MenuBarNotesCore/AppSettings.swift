@@ -52,13 +52,16 @@ public enum MenuCard: String, CaseIterable, Codable, Equatable, Identifiable, Se
 public struct AppSettings: Codable, Equatable, Sendable {
     public var appearanceMode: AppearanceMode
     public var cardOrder: [MenuCard]
+    public var markdownStorageDirectory: String?
 
     public init(
         appearanceMode: AppearanceMode = .system,
-        cardOrder: [MenuCard] = MenuCard.defaultOrder
+        cardOrder: [MenuCard] = MenuCard.defaultOrder,
+        markdownStorageDirectory: String? = nil
     ) {
         self.appearanceMode = appearanceMode
         self.cardOrder = MenuCard.normalizedOrder(from: cardOrder)
+        self.markdownStorageDirectory = markdownStorageDirectory
     }
 
     public static let `default` = AppSettings()

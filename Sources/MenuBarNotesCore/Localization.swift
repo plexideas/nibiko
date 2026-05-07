@@ -5,9 +5,16 @@ public enum LocalizationKey: String, CaseIterable, Sendable {
     case statusItemDescription
     case popoverTitle
     case popoverSubtitle
-    case progressSummary
+    case progressSummaryFormat
     case notesCardTitle
     case notesPlaceholder
+    case addRecordPlaceholder
+    case addNoteButton
+    case addTodoButton
+    case completeTodo
+    case completedTodo
+    case noStorageLocation
+    case recordAddError
     case pomodoroCardTitle
     case pomodoroPlaceholder
     case calendarCardTitle
@@ -24,6 +31,9 @@ public enum LocalizationKey: String, CaseIterable, Sendable {
     case appearanceLight
     case appearanceDark
     case cardOrderLabel
+    case markdownStorageLocationLabel
+    case chooseMarkdownStorageLocation
+    case markdownStorageLocationHelp
     case moveUp
     case moveDown
     case featureComingSoon
@@ -64,9 +74,16 @@ public struct Localizer: Sendable {
         .statusItemDescription: "Menu Bar Notes",
         .popoverTitle: "Today",
         .popoverSubtitle: "Quietly ready from the menu bar.",
-        .progressSummary: "0 active items - 0 completed today",
+        .progressSummaryFormat: "%d active items - %d completed today",
         .notesCardTitle: "Notes / Todos / Reminders",
         .notesPlaceholder: "No active records yet.",
+        .addRecordPlaceholder: "Add a note or todo",
+        .addNoteButton: "Add Note",
+        .addTodoButton: "Add Todo",
+        .completeTodo: "Complete todo",
+        .completedTodo: "Completed",
+        .noStorageLocation: "Choose a Markdown folder in Settings to start capturing records.",
+        .recordAddError: "Could not save the record.",
         .pomodoroCardTitle: "Pomodoro",
         .pomodoroPlaceholder: "Focus timer is ready for a later phase.",
         .calendarCardTitle: "Calendar",
@@ -83,6 +100,9 @@ public struct Localizer: Sendable {
         .appearanceLight: "Light",
         .appearanceDark: "Dark",
         .cardOrderLabel: "Card Order",
+        .markdownStorageLocationLabel: "Markdown Storage Location",
+        .chooseMarkdownStorageLocation: "Choose Folder...",
+        .markdownStorageLocationHelp: "Notes and todos are saved as Markdown files in this folder.",
         .moveUp: "Move Up",
         .moveDown: "Move Down",
         .featureComingSoon: "Configuration for this area arrives in a later phase.",

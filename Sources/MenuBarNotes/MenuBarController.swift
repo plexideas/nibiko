@@ -5,6 +5,7 @@ import SwiftUI
 @MainActor
 final class MenuBarController: NSObject {
     private let settingsStore: AppSettingsStore
+    private let recordListStore: RecordListStore
     private let localizer: Localizer
     private let showSettings: () -> Void
     private let showAppInfo: () -> Void
@@ -13,11 +14,13 @@ final class MenuBarController: NSObject {
 
     init(
         settingsStore: AppSettingsStore,
+        recordListStore: RecordListStore,
         localizer: Localizer,
         showSettings: @escaping () -> Void,
         showAppInfo: @escaping () -> Void
     ) {
         self.settingsStore = settingsStore
+        self.recordListStore = recordListStore
         self.localizer = localizer
         self.showSettings = showSettings
         self.showAppInfo = showAppInfo
@@ -38,6 +41,7 @@ final class MenuBarController: NSObject {
         popover.contentViewController = NSHostingController(
             rootView: PopoverRootView(
                 settingsStore: settingsStore,
+                recordListStore: recordListStore,
                 localizer: localizer,
                 showSettings: { [weak self] in
                     self?.popover.performClose(nil)
@@ -49,6 +53,10 @@ final class MenuBarController: NSObject {
                 }
             )
         )
+    }
+
+    func updateActiveCount(_ count: Int) {
+        statusItem.button?.title = count > 0 ? "\(count)" : ""
     }
 
     @objc

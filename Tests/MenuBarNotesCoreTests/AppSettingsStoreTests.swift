@@ -39,6 +39,18 @@ struct AppSettingsStoreTests {
         #expect(reloadedStore.settings.cardOrder == [.calendar, .notes, .pomodoro])
     }
 
+    @Test("Markdown storage directory changes persist across store recreation")
+    func persistsMarkdownStorageDirectory() {
+        let defaults = isolatedDefaults()
+        let persistence = UserDefaultsSettingsPersistence(defaults: defaults)
+        let store = AppSettingsStore(persistence: persistence)
+
+        store.setMarkdownStorageDirectory("/tmp/MenuBarNotesRecords")
+
+        let reloadedStore = AppSettingsStore(persistence: persistence)
+        #expect(reloadedStore.settings.markdownStorageDirectory == "/tmp/MenuBarNotesRecords")
+    }
+
     @Test("card order normalization preserves every Phase 1 card once")
     func normalizesCardOrder() {
         let settings = AppSettings(cardOrder: [.calendar, .calendar])
