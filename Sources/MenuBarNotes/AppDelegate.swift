@@ -9,9 +9,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSLog("Menu Bar Notes settings error: \(error.localizedDescription)")
     })
     private lazy var recordListStore = RecordListStore(directory: markdownStorageURL(from: settingsStore.settings))
+    private lazy var reminderNotificationStore = ReminderNotificationStore(
+        scheduler: UserNotificationReminderScheduler()
+    )
     private lazy var menuBarController = MenuBarController(
         settingsStore: settingsStore,
         recordListStore: recordListStore,
+        reminderNotificationStore: reminderNotificationStore,
         localizer: localizer,
         showSettings: { [weak self] in self?.showSettings() },
         showAppInfo: { [weak self] in self?.showAppInfo() }

@@ -10,6 +10,7 @@ struct ActiveRecordCounterTests {
             Record(kind: .todo, title: "Active todo", status: .active),
             Record(kind: .todo, title: "Done todo", status: .completed),
             Record(kind: .reminder, title: "Active reminder", status: .active),
+            Record(kind: .reminder, title: "Done reminder", status: .completed),
             Record(kind: .note, title: "Reference note", status: .active)
         ]
 

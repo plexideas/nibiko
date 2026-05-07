@@ -11,8 +11,13 @@ public enum LocalizationKey: String, CaseIterable, Sendable {
     case addRecordPlaceholder
     case addNoteButton
     case addTodoButton
+    case addReminderButton
     case completeTodo
+    case completeReminder
     case completedTodo
+    case reminderTimeLabel
+    case notificationsDeniedStatus
+    case notificationsUnavailableStatus
     case noStorageLocation
     case recordAddError
     case pomodoroCardTitle
@@ -77,11 +82,16 @@ public struct Localizer: Sendable {
         .progressSummaryFormat: "%d active items - %d completed today",
         .notesCardTitle: "Notes / Todos / Reminders",
         .notesPlaceholder: "No active records yet.",
-        .addRecordPlaceholder: "Add a note or todo",
+        .addRecordPlaceholder: "Add a note, todo, or reminder",
         .addNoteButton: "Add Note",
         .addTodoButton: "Add Todo",
+        .addReminderButton: "Add Reminder",
         .completeTodo: "Complete todo",
+        .completeReminder: "Complete reminder",
         .completedTodo: "Completed",
+        .reminderTimeLabel: "Reminder time",
+        .notificationsDeniedStatus: "Notifications are off. Reminders still appear here.",
+        .notificationsUnavailableStatus: "Notifications are unavailable. Reminders still appear here.",
         .noStorageLocation: "Choose a Markdown folder in Settings to start capturing records.",
         .recordAddError: "Could not save the record.",
         .pomodoroCardTitle: "Pomodoro",

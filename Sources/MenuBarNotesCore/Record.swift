@@ -61,11 +61,21 @@ public struct RecordDraft: Equatable, Sendable {
     public var kind: RecordKind
     public var title: String
     public var body: String
+    public var dueAt: Date?
+    public var reminderAt: Date?
 
-    public init(kind: RecordKind, title: String, body: String = "") {
+    public init(
+        kind: RecordKind,
+        title: String,
+        body: String = "",
+        dueAt: Date? = nil,
+        reminderAt: Date? = nil
+    ) {
         self.kind = kind
         self.title = title
         self.body = body
+        self.dueAt = dueAt
+        self.reminderAt = reminderAt
     }
 }
 
@@ -74,5 +84,40 @@ public enum ActiveRecordCounter {
         records.filter { record in
             record.kind.isActionable && record.status != .completed
         }.count
+    }
+}
+
+public enum RecordDisplaySupport {
+    public static func recordsForDisplay(_ records: [Record]) -> [Record] {
+        records.sorted { lhs, rhs in
+            if lhs.status != rhs.status {
+                return lhs.status == .active
+            }
+
+            let lhsDisplayAt = displayTime(for: lhs)
+            let rhsDisplayAt = displayTime(for: rhs)
+            if lhsDisplayAt != rhsDisplayAt {
+                switch (lhsDisplayAt, rhsDisplayAt) {
+                case let (lhsDisplayAt?, rhsDisplayAt?):
+                    return lhsDisplayAt < rhsDisplayAt
+                case (_?, nil):
+                    return true
+                case (nil, _?):
+                    return false
+                case (nil, nil):
+                    break
+                }
+            }
+
+            return lhs.updatedAt > rhs.updatedAt
+        }
+    }
+
+    public static func displayTime(for record: Record) -> Date? {
+        guard record.kind == .reminder else {
+            return nil
+        }
+
+        return record.reminderAt ?? record.dueAt
     }
 }

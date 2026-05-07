@@ -55,13 +55,22 @@ public final class RecordListStore: ObservableObject {
         try addRecord(RecordDraft(kind: .todo, title: title))
     }
 
-    public func completeTodo(id: String) throws {
+    @discardableResult
+    public func addReminder(title: String, dueAt: Date? = nil, reminderAt: Date? = nil) throws -> Record {
+        try addRecord(RecordDraft(kind: .reminder, title: title, dueAt: dueAt, reminderAt: reminderAt))
+    }
+
+    public func completeRecord(id: String) throws {
         guard let directory else {
             throw RecordListStoreError.missingStorageDirectory
         }
 
         try storage.completeRecord(id: id, in: directory)
         reload()
+    }
+
+    public func completeTodo(id: String) throws {
+        try completeRecord(id: id)
     }
 
     public func reload() {

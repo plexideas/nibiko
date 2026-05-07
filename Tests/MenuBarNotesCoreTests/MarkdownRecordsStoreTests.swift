@@ -29,6 +29,31 @@ struct MarkdownRecordsStoreTests {
         #expect(records.first(where: { $0.id == todo.id })?.status == .active)
     }
 
+    @Test("writes and reads reminder time metadata")
+    func writesAndReadsReminderTimeMetadata() throws {
+        let directory = try temporaryDirectory()
+        let store = MarkdownRecordsStore()
+        let createdAt = Date(timeIntervalSince1970: 1_800_000_000)
+        let dueAt = createdAt.addingTimeInterval(3_600)
+        let reminderAt = createdAt.addingTimeInterval(1_800)
+
+        let reminder = try store.addRecord(
+            RecordDraft(
+                kind: .reminder,
+                title: "Review launch notes",
+                dueAt: dueAt,
+                reminderAt: reminderAt
+            ),
+            in: directory,
+            now: createdAt
+        )
+
+        let reloaded = try #require(try store.loadRecords(in: directory).first(where: { $0.id == reminder.id }))
+        #expect(reloaded.kind == .reminder)
+        #expect(reloaded.dueAt == dueAt)
+        #expect(reloaded.reminderAt == reminderAt)
+    }
+
     @Test("completes a todo record without dropping its Markdown body")
     func completesTodo() throws {
         let directory = try temporaryDirectory()

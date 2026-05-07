@@ -42,7 +42,9 @@ public struct MarkdownRecordsStore: Sendable {
             title: title,
             body: draft.body.trimmingCharacters(in: .whitespacesAndNewlines),
             createdAt: now,
-            updatedAt: now
+            updatedAt: now,
+            dueAt: draft.dueAt,
+            reminderAt: draft.reminderAt
         )
         try writeRecord(record, in: directory)
         return record

@@ -4,8 +4,10 @@ import SwiftUI
 struct PopoverRootView: View {
     @ObservedObject var settingsStore: AppSettingsStore
     @ObservedObject var recordListStore: RecordListStore
+    @ObservedObject var reminderNotificationStore: ReminderNotificationStore
     @State private var draftTitle = ""
     @State private var draftKind: RecordKind = .todo
+    @State private var draftReminderAt = Date().addingTimeInterval(3_600)
     @State private var addError: String?
 
     let localizer: Localizer
@@ -22,9 +24,11 @@ struct PopoverRootView: View {
                         if card == .notes {
                             NotesTodosCard(
                                 recordListStore: recordListStore,
+                                reminderNotificationStore: reminderNotificationStore,
                                 localizer: localizer,
                                 draftTitle: $draftTitle,
                                 draftKind: $draftKind,
+                                draftReminderAt: $draftReminderAt,
                                 addError: $addError
                             )
                         } else {
@@ -83,19 +87,29 @@ struct PopoverRootView: View {
 
 private struct NotesTodosCard: View {
     @ObservedObject var recordListStore: RecordListStore
+    @ObservedObject var reminderNotificationStore: ReminderNotificationStore
     let localizer: Localizer
     @Binding var draftTitle: String
     @Binding var draftKind: RecordKind
+    @Binding var draftReminderAt: Date
     @Binding var addError: String?
 
     private var displayedRecords: [Record] {
-        recordListStore.records.filter { $0.kind == .note || $0.kind == .todo }
+        RecordDisplaySupport.recordsForDisplay(
+            recordListStore.records.filter { $0.kind == .note || $0.kind == .todo || $0.kind == .reminder }
+        )
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(localizer.string(.notesCardTitle))
                 .font(.system(size: 12, weight: .semibold))
+
+            if let notificationStatusText {
+                Text(notificationStatusText)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
 
             if recordListStore.lastErrorDescription != nil {
                 Text(localizer.string(.recordAddError))
@@ -110,7 +124,7 @@ private struct NotesTodosCard: View {
                 VStack(spacing: 6) {
                     ForEach(displayedRecords) { record in
                         RecordRow(record: record, localizer: localizer) {
-                            try? recordListStore.completeTodo(id: record.id)
+                            try? recordListStore.completeRecord(id: record.id)
                         }
                     }
                 }
@@ -122,10 +136,21 @@ private struct NotesTodosCard: View {
                 Picker("", selection: $draftKind) {
                     Text(localizer.string(.addTodoButton)).tag(RecordKind.todo)
                     Text(localizer.string(.addNoteButton)).tag(RecordKind.note)
+                    Text(localizer.string(.addReminderButton)).tag(RecordKind.reminder)
                 }
                 .labelsHidden()
                 .pickerStyle(.segmented)
                 .controlSize(.small)
+
+                if draftKind == .reminder {
+                    DatePicker(
+                        localizer.string(.reminderTimeLabel),
+                        selection: $draftReminderAt,
+                        displayedComponents: [.date, .hourAndMinute]
+                    )
+                    .font(.system(size: 11))
+                    .controlSize(.small)
+                }
 
                 HStack(spacing: 6) {
                     TextField(localizer.string(.addRecordPlaceholder), text: $draftTitle)
@@ -136,7 +161,7 @@ private struct NotesTodosCard: View {
                     Button(action: addRecord) {
                         Image(systemName: "plus")
                     }
-                    .help(localizer.string(draftKind == .todo ? .addTodoButton : .addNoteButton))
+                    .help(addButtonHelp)
                     .disabled(trimmedTitle.isEmpty || recordListStore.lastErrorDescription != nil)
                 }
                 .controlSize(.small)
@@ -162,6 +187,28 @@ private struct NotesTodosCard: View {
         draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    private var addButtonHelp: String {
+        switch draftKind {
+        case .note:
+            return localizer.string(.addNoteButton)
+        case .todo:
+            return localizer.string(.addTodoButton)
+        case .reminder:
+            return localizer.string(.addReminderButton)
+        }
+    }
+
+    private var notificationStatusText: String? {
+        switch reminderNotificationStore.status {
+        case .denied:
+            return localizer.string(.notificationsDeniedStatus)
+        case .unavailable:
+            return localizer.string(.notificationsUnavailableStatus)
+        case .idle, .scheduled, .failed:
+            return nil
+        }
+    }
+
     private func addRecord() {
         guard !trimmedTitle.isEmpty else {
             return
@@ -174,7 +221,12 @@ private struct NotesTodosCard: View {
             case .todo:
                 try recordListStore.addTodo(title: trimmedTitle)
             case .reminder:
-                return
+                let record = try recordListStore.addReminder(
+                    title: trimmedTitle,
+                    dueAt: draftReminderAt,
+                    reminderAt: draftReminderAt
+                )
+                reminderNotificationStore.scheduleIfNeeded(for: record)
             }
             draftTitle = ""
             addError = nil
@@ -193,12 +245,12 @@ private struct RecordRow: View {
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 7) {
-            if record.kind == .todo {
+            if record.kind.isActionable {
                 Button(action: complete) {
                     Image(systemName: record.status == .completed ? "checkmark.circle.fill" : "circle")
                 }
                 .buttonStyle(.borderless)
-                .help(localizer.string(record.status == .completed ? .completedTodo : .completeTodo))
+                .help(completeHelpText)
                 .disabled(record.status == .completed)
             } else {
                 Image(systemName: "note.text")
@@ -216,11 +268,23 @@ private struct RecordRow: View {
                     Text(localizer.string(.completedTodo))
                         .font(.system(size: 10))
                         .foregroundStyle(.secondary)
+                } else if let displayTime = RecordDisplaySupport.displayTime(for: record) {
+                    Text(displayTime.formatted(date: .abbreviated, time: .shortened))
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
                 }
             }
 
             Spacer(minLength: 0)
         }
+    }
+
+    private var completeHelpText: String {
+        if record.status == .completed {
+            return localizer.string(.completedTodo)
+        }
+
+        return localizer.string(record.kind == .reminder ? .completeReminder : .completeTodo)
     }
 }
 
