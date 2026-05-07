@@ -22,6 +22,22 @@ public enum LocalizationKey: String, CaseIterable, Sendable {
     case recordAddError
     case pomodoroCardTitle
     case pomodoroPlaceholder
+    case pomodoroTemplateLabel
+    case pomodoroRemainingLabel
+    case pomodoroIdleStatus
+    case pomodoroRunningStatus
+    case pomodoroPausedStatus
+    case pomodoroCompletedStatus
+    case pomodoroStart
+    case pomodoroPause
+    case pomodoroResume
+    case pomodoroStop
+    case pomodoroVisibleLabel
+    case pomodoroTemplatesLabel
+    case pomodoroTemplateNamePlaceholder
+    case pomodoroFocusMinutesLabel
+    case pomodoroAddTemplate
+    case pomodoroRemoveTemplate
     case calendarCardTitle
     case calendarPlaceholder
     case settingsButton
@@ -104,7 +120,23 @@ public struct Localizer: Sendable {
         .noStorageLocation: "Choose a Markdown folder in Settings to start capturing records.",
         .recordAddError: "Could not save the record.",
         .pomodoroCardTitle: "Pomodoro",
-        .pomodoroPlaceholder: "Focus timer is ready for a later phase.",
+        .pomodoroPlaceholder: "Focus timer is hidden.",
+        .pomodoroTemplateLabel: "Template",
+        .pomodoroRemainingLabel: "Remaining",
+        .pomodoroIdleStatus: "Ready",
+        .pomodoroRunningStatus: "Focusing",
+        .pomodoroPausedStatus: "Paused",
+        .pomodoroCompletedStatus: "Complete",
+        .pomodoroStart: "Start",
+        .pomodoroPause: "Pause",
+        .pomodoroResume: "Resume",
+        .pomodoroStop: "Stop",
+        .pomodoroVisibleLabel: "Show Pomodoro card",
+        .pomodoroTemplatesLabel: "Timer Templates",
+        .pomodoroTemplateNamePlaceholder: "Template name",
+        .pomodoroFocusMinutesLabel: "Focus minutes",
+        .pomodoroAddTemplate: "Add Template",
+        .pomodoroRemoveTemplate: "Remove Template",
         .calendarCardTitle: "Calendar",
         .calendarPlaceholder: "Upcoming events will appear here.",
         .settingsButton: "Settings",

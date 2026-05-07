@@ -5,6 +5,7 @@ struct PopoverRootView: View {
     @ObservedObject var settingsStore: AppSettingsStore
     @ObservedObject var recordListStore: RecordListStore
     @ObservedObject var reminderNotificationStore: ReminderNotificationStore
+    @ObservedObject var pomodoroTimer: PomodoroTimer
     let captureService: QuickAddCaptureService
     @State private var draftTitle = ""
     @State private var draftKind: RecordKind = .todo
@@ -21,7 +22,7 @@ struct PopoverRootView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     header
 
-                    ForEach(settingsStore.settings.cardOrder) { card in
+                    ForEach(visibleCards) { card in
                         if card == .notes {
                             NotesTodosCard(
                                 recordListStore: recordListStore,
@@ -32,6 +33,12 @@ struct PopoverRootView: View {
                                 draftKind: $draftKind,
                                 draftReminderAt: $draftReminderAt,
                                 addError: $addError
+                            )
+                        } else if card == .pomodoro {
+                            PomodoroCard(
+                                settingsStore: settingsStore,
+                                pomodoroTimer: pomodoroTimer,
+                                localizer: localizer
                             )
                         } else {
                             PlaceholderCard(card: card, localizer: localizer)
@@ -84,6 +91,12 @@ struct PopoverRootView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.bottom, 2)
+    }
+
+    private var visibleCards: [MenuCard] {
+        settingsStore.settings.cardOrder.filter { card in
+            card != .pomodoro || settingsStore.settings.isPomodoroCardVisible
+        }
     }
 }
 
@@ -287,6 +300,126 @@ private struct RecordRow: View {
         }
 
         return localizer.string(record.kind == .reminder ? .completeReminder : .completeTodo)
+    }
+}
+
+private struct PomodoroCard: View {
+    @ObservedObject var settingsStore: AppSettingsStore
+    @ObservedObject var pomodoroTimer: PomodoroTimer
+    let localizer: Localizer
+
+    private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(localizer.string(.pomodoroCardTitle))
+                    .font(.system(size: 12, weight: .semibold))
+                Spacer()
+                Text(statusText)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
+
+            Picker(localizer.string(.pomodoroTemplateLabel), selection: selectedTemplateIDBinding) {
+                ForEach(settingsStore.settings.pomodoroTemplates) { template in
+                    Text(template.name).tag(template.id)
+                }
+            }
+            .labelsHidden()
+            .pickerStyle(.menu)
+            .controlSize(.small)
+            .disabled(!pomodoroTimer.canStart)
+
+            HStack(alignment: .center, spacing: 10) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(localizer.string(.pomodoroRemainingLabel))
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                    Text(formattedRemaining)
+                        .font(.system(size: 24, weight: .semibold, design: .monospaced))
+                        .contentTransition(.numericText())
+                }
+
+                Spacer()
+
+                HStack(spacing: 6) {
+                    if pomodoroTimer.canStart {
+                        Button(action: start) {
+                            Image(systemName: "play.fill")
+                        }
+                        .help(localizer.string(.pomodoroStart))
+                    }
+
+                    if pomodoroTimer.canPause {
+                        Button(action: pomodoroTimer.pause) {
+                            Image(systemName: "pause.fill")
+                        }
+                        .help(localizer.string(.pomodoroPause))
+                    }
+
+                    if pomodoroTimer.canResume {
+                        Button(action: pomodoroTimer.resume) {
+                            Image(systemName: "play.fill")
+                        }
+                        .help(localizer.string(.pomodoroResume))
+                    }
+
+                    Button(action: pomodoroTimer.stop) {
+                        Image(systemName: "stop.fill")
+                    }
+                    .help(localizer.string(.pomodoroStop))
+                    .disabled(pomodoroTimer.session.state == .idle)
+                }
+                .buttonStyle(.borderless)
+                .controlSize(.small)
+            }
+        }
+        .padding(10)
+        .background(.quaternary.opacity(0.55), in: RoundedRectangle(cornerRadius: 8))
+        .onReceive(ticker) { _ in
+            pomodoroTimer.tick()
+        }
+    }
+
+    private var selectedTemplateIDBinding: Binding<String> {
+        Binding(
+            get: { settingsStore.settings.selectedPomodoroTemplateID },
+            set: { templateID in
+                settingsStore.setSelectedPomodoroTemplateID(templateID)
+                if let template = settingsStore.settings.pomodoroTemplates.first(where: { $0.id == templateID }) {
+                    pomodoroTimer.selectTemplate(template)
+                }
+            }
+        )
+    }
+
+    private var selectedTemplate: PomodoroTemplate {
+        settingsStore.settings.pomodoroTemplates.first {
+            $0.id == settingsStore.settings.selectedPomodoroTemplateID
+        } ?? settingsStore.settings.pomodoroTemplates[0]
+    }
+
+    private var formattedRemaining: String {
+        let remaining = pomodoroTimer.remainingSeconds
+        return String(format: "%02d:%02d", remaining / 60, remaining % 60)
+    }
+
+    private var statusText: String {
+        switch pomodoroTimer.session.state {
+        case .idle:
+            return localizer.string(.pomodoroIdleStatus)
+        case .running:
+            return localizer.string(.pomodoroRunningStatus)
+        case .paused:
+            return localizer.string(.pomodoroPausedStatus)
+        case .completed:
+            return localizer.string(.pomodoroCompletedStatus)
+        }
+    }
+
+    private func start() {
+        pomodoroTimer.start(template: selectedTemplate)
     }
 }
 

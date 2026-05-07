@@ -69,6 +69,45 @@ public final class AppSettingsStore: ObservableObject {
         }
     }
 
+    public func setPomodoroCardVisible(_ isVisible: Bool) {
+        update { settings in
+            settings.isPomodoroCardVisible = isVisible
+        }
+    }
+
+    public func setSelectedPomodoroTemplateID(_ templateID: String) {
+        update { settings in
+            guard settings.pomodoroTemplates.contains(where: { $0.id == templateID }) else {
+                return
+            }
+            settings.selectedPomodoroTemplateID = templateID
+        }
+    }
+
+    public func upsertPomodoroTemplate(_ template: PomodoroTemplate) {
+        update { settings in
+            let normalizedTemplate = PomodoroTemplate.normalizedTemplates([template])[0]
+            if let index = settings.pomodoroTemplates.firstIndex(where: { $0.id == normalizedTemplate.id }) {
+                settings.pomodoroTemplates[index] = normalizedTemplate
+            } else {
+                settings.pomodoroTemplates.append(normalizedTemplate)
+                settings.selectedPomodoroTemplateID = normalizedTemplate.id
+            }
+        }
+    }
+
+    public func removePomodoroTemplate(id: String) {
+        update { settings in
+            settings.pomodoroTemplates.removeAll { $0.id == id }
+            if settings.pomodoroTemplates.isEmpty {
+                settings.pomodoroTemplates = PomodoroTemplate.defaultTemplates
+            }
+            if !settings.pomodoroTemplates.contains(where: { $0.id == settings.selectedPomodoroTemplateID }) {
+                settings.selectedPomodoroTemplateID = settings.pomodoroTemplates[0].id
+            }
+        }
+    }
+
     public func moveCard(_ card: MenuCard, direction: CardMoveDirection) {
         update { settings in
             guard let index = settings.cardOrder.firstIndex(of: card) else {
@@ -100,6 +139,10 @@ public final class AppSettingsStore: ObservableObject {
             .trimmingCharacters(in: .whitespacesAndNewlines)
         if nextSettings.markdownStorageDirectory?.isEmpty == true {
             nextSettings.markdownStorageDirectory = nil
+        }
+        nextSettings.pomodoroTemplates = PomodoroTemplate.normalizedTemplates(nextSettings.pomodoroTemplates)
+        if !nextSettings.pomodoroTemplates.contains(where: { $0.id == nextSettings.selectedPomodoroTemplateID }) {
+            nextSettings.selectedPomodoroTemplateID = nextSettings.pomodoroTemplates[0].id
         }
         settings = nextSettings
 

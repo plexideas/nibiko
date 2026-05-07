@@ -54,24 +54,39 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var cardOrder: [MenuCard]
     public var markdownStorageDirectory: String?
     public var quickAddHotkey: HotkeyBinding
+    public var isPomodoroCardVisible: Bool
+    public var pomodoroTemplates: [PomodoroTemplate]
+    public var selectedPomodoroTemplateID: String
 
     private enum CodingKeys: String, CodingKey {
         case appearanceMode
         case cardOrder
         case markdownStorageDirectory
         case quickAddHotkey
+        case isPomodoroCardVisible
+        case pomodoroTemplates
+        case selectedPomodoroTemplateID
     }
 
     public init(
         appearanceMode: AppearanceMode = .system,
         cardOrder: [MenuCard] = MenuCard.defaultOrder,
         markdownStorageDirectory: String? = nil,
-        quickAddHotkey: HotkeyBinding = .default
+        quickAddHotkey: HotkeyBinding = .default,
+        isPomodoroCardVisible: Bool = true,
+        pomodoroTemplates: [PomodoroTemplate] = PomodoroTemplate.defaultTemplates,
+        selectedPomodoroTemplateID: String = PomodoroTemplate.defaultFocus.id
     ) {
         self.appearanceMode = appearanceMode
         self.cardOrder = MenuCard.normalizedOrder(from: cardOrder)
         self.markdownStorageDirectory = markdownStorageDirectory
         self.quickAddHotkey = quickAddHotkey
+        self.isPomodoroCardVisible = isPomodoroCardVisible
+        self.pomodoroTemplates = PomodoroTemplate.normalizedTemplates(pomodoroTemplates)
+        self.selectedPomodoroTemplateID = Self.normalizedSelectedPomodoroTemplateID(
+            selectedPomodoroTemplateID,
+            templates: self.pomodoroTemplates
+        )
     }
 
     public static let `default` = AppSettings()
@@ -84,6 +99,15 @@ public struct AppSettings: Codable, Equatable, Sendable {
         )
         markdownStorageDirectory = try container.decodeIfPresent(String.self, forKey: .markdownStorageDirectory)
         quickAddHotkey = try container.decodeIfPresent(HotkeyBinding.self, forKey: .quickAddHotkey) ?? .default
+        isPomodoroCardVisible = try container.decodeIfPresent(Bool.self, forKey: .isPomodoroCardVisible) ?? true
+        pomodoroTemplates = PomodoroTemplate.normalizedTemplates(
+            try container.decodeIfPresent([PomodoroTemplate].self, forKey: .pomodoroTemplates)
+                ?? PomodoroTemplate.defaultTemplates
+        )
+        selectedPomodoroTemplateID = Self.normalizedSelectedPomodoroTemplateID(
+            try container.decodeIfPresent(String.self, forKey: .selectedPomodoroTemplateID),
+            templates: pomodoroTemplates
+        )
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -92,6 +116,20 @@ public struct AppSettings: Codable, Equatable, Sendable {
         try container.encode(cardOrder, forKey: .cardOrder)
         try container.encodeIfPresent(markdownStorageDirectory, forKey: .markdownStorageDirectory)
         try container.encode(quickAddHotkey, forKey: .quickAddHotkey)
+        try container.encode(isPomodoroCardVisible, forKey: .isPomodoroCardVisible)
+        try container.encode(pomodoroTemplates, forKey: .pomodoroTemplates)
+        try container.encode(selectedPomodoroTemplateID, forKey: .selectedPomodoroTemplateID)
+    }
+
+    private static func normalizedSelectedPomodoroTemplateID(
+        _ selectedTemplateID: String?,
+        templates: [PomodoroTemplate]
+    ) -> String {
+        if let selectedTemplateID, templates.contains(where: { $0.id == selectedTemplateID }) {
+            return selectedTemplateID
+        }
+
+        return templates[0].id
     }
 }
 

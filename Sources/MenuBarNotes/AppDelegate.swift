@@ -12,6 +12,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var reminderNotificationStore = ReminderNotificationStore(
         scheduler: UserNotificationReminderScheduler()
     )
+    private lazy var pomodoroTimer = PomodoroTimer(
+        selectedTemplate: selectedPomodoroTemplate(from: settingsStore.settings)
+    )
     private lazy var quickAddCaptureService = QuickAddCaptureService(
         recordListStore: recordListStore,
         scheduleReminder: { [weak self] record in
@@ -29,6 +32,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settingsStore: settingsStore,
         recordListStore: recordListStore,
         reminderNotificationStore: reminderNotificationStore,
+        pomodoroTimer: pomodoroTimer,
         captureService: quickAddCaptureService,
         localizer: localizer,
         showSettings: { [weak self] in self?.showSettings() },
@@ -49,6 +53,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.applyAppearance(settings.appearanceMode)
             self?.recordListStore.setDirectory(self?.markdownStorageURL(from: settings))
             self?.hotkeyRegistrar.register(settings.quickAddHotkey)
+            self?.pomodoroTimer.resetTemplates(
+                settings.pomodoroTemplates,
+                selectedTemplateID: settings.selectedPomodoroTemplateID
+            )
         }
 
         recordsSubscription = recordListStore.$records.sink { [weak self] records in
@@ -106,5 +114,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         return URL(fileURLWithPath: path, isDirectory: true)
+    }
+
+    private func selectedPomodoroTemplate(from settings: AppSettings) -> PomodoroTemplate {
+        settings.pomodoroTemplates.first { $0.id == settings.selectedPomodoroTemplateID }
+            ?? settings.pomodoroTemplates[0]
     }
 }
