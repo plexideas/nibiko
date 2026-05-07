@@ -149,19 +149,13 @@ private struct NotesTodosCard: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
-            } else {
+            } else if displayedRecords.count > maximumVisibleRows {
                 ScrollView {
-                    LazyVStack(spacing: recordRowSpacing) {
-                        ForEach(displayedRecords) { record in
-                            RecordRow(record: record, localizer: localizer) {
-                                try? recordListStore.completeRecord(id: record.id)
-                            }
-                            .frame(minHeight: recordRowHeight)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    recordRows
                 }
-                .frame(maxHeight: recordListHeight)
+                .frame(height: recordListHeight)
+            } else {
+                recordRows
             }
 
             Divider()
@@ -220,6 +214,18 @@ private struct NotesTodosCard: View {
 
     private var recordListHeight: CGFloat {
         cappedListHeight(count: displayedRecords.count, rowHeight: recordRowHeight, spacing: recordRowSpacing)
+    }
+
+    private var recordRows: some View {
+        LazyVStack(spacing: recordRowSpacing) {
+            ForEach(displayedRecords) { record in
+                RecordRow(record: record, localizer: localizer) {
+                    try? recordListStore.completeRecord(id: record.id)
+                }
+                .frame(minHeight: recordRowHeight)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func cappedListHeight(count: Int, rowHeight: CGFloat, spacing: CGFloat) -> CGFloat {
@@ -510,23 +516,29 @@ private struct CalendarCard: View {
                 statusText(localizer.string(.calendarAccessUnavailableStatus))
             } else if calendarEventsStore.events.isEmpty {
                 statusText(localizer.string(.calendarNoEvents))
-            } else {
+            } else if calendarEventsStore.events.count > maximumVisibleRows {
                 ScrollView {
-                    LazyVStack(spacing: eventRowSpacing) {
-                        ForEach(calendarEventsStore.events) { event in
-                            CalendarEventRow(event: event, localizer: localizer)
-                                .frame(minHeight: eventRowHeight)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    eventRows
                 }
-                .frame(maxHeight: eventListHeight)
+                .frame(height: eventListHeight)
+            } else {
+                eventRows
             }
         }
     }
 
     private var eventListHeight: CGFloat {
         cappedListHeight(count: calendarEventsStore.events.count, rowHeight: eventRowHeight, spacing: eventRowSpacing)
+    }
+
+    private var eventRows: some View {
+        LazyVStack(spacing: eventRowSpacing) {
+            ForEach(calendarEventsStore.events) { event in
+                CalendarEventRow(event: event, localizer: localizer)
+                    .frame(minHeight: eventRowHeight)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func cappedListHeight(count: Int, rowHeight: CGFloat, spacing: CGFloat) -> CGFloat {
