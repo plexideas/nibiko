@@ -92,6 +92,101 @@ struct PomodoroTimerTests {
         #expect(timer.session.templateID == "long")
         #expect(timer.remainingSeconds == 2_700)
     }
+
+    @Test("initial session restores a paused Pomodoro")
+    func initialSessionRestoresPausedPomodoro() {
+        let clock = ManualClock(now: Date(timeIntervalSince1970: 12_000))
+        let template = PomodoroTemplate(id: "deep", name: "Deep Work", focusDurationSeconds: 1_500)
+        let session = PomodoroSession(
+            state: .paused,
+            templateID: template.id,
+            startedAt: Date(timeIntervalSince1970: 10_000),
+            pausedRemainingSeconds: 780
+        )
+
+        let timer = PomodoroTimer(
+            selectedTemplate: template,
+            currentSession: session,
+            clock: { clock.now }
+        )
+
+        #expect(timer.session == session)
+        #expect(timer.remainingSeconds == 780)
+        #expect(timer.canResume)
+    }
+
+    @Test("initial session restores an in-progress Pomodoro")
+    func initialSessionRestoresRunningPomodoro() {
+        let clock = ManualClock(now: Date(timeIntervalSince1970: 10_300))
+        let template = PomodoroTemplate(id: "deep", name: "Deep Work", focusDurationSeconds: 1_500)
+        let session = PomodoroSession(
+            state: .running,
+            templateID: template.id,
+            startedAt: Date(timeIntervalSince1970: 10_000),
+            endsAt: Date(timeIntervalSince1970: 11_500)
+        )
+
+        let timer = PomodoroTimer(
+            selectedTemplate: template,
+            currentSession: session,
+            clock: { clock.now }
+        )
+
+        #expect(timer.session == session)
+        #expect(timer.remainingSeconds == 1_200)
+        #expect(timer.canPause)
+    }
+
+    @Test("initial session completes an elapsed running Pomodoro")
+    func initialSessionCompletesElapsedRunningPomodoro() {
+        let clock = ManualClock(now: Date(timeIntervalSince1970: 12_000))
+        let template = PomodoroTemplate(id: "short", name: "Short", focusDurationSeconds: 60)
+        let session = PomodoroSession(
+            state: .running,
+            templateID: template.id,
+            startedAt: Date(timeIntervalSince1970: 10_000),
+            endsAt: Date(timeIntervalSince1970: 10_060)
+        )
+
+        let timer = PomodoroTimer(
+            selectedTemplate: template,
+            currentSession: session,
+            clock: { clock.now }
+        )
+
+        #expect(timer.session.state == .completed)
+        #expect(timer.session.templateID == template.id)
+        #expect(timer.remainingSeconds == 0)
+    }
+
+    @Test("initial session restores completed and idle Pomodoros")
+    func initialSessionRestoresCompletedAndIdlePomodoros() {
+        let clock = ManualClock(now: Date(timeIntervalSince1970: 12_000))
+        let template = PomodoroTemplate(id: "deep", name: "Deep Work", focusDurationSeconds: 1_500)
+        let completedSession = PomodoroSession(
+            state: .completed,
+            templateID: template.id,
+            startedAt: Date(timeIntervalSince1970: 10_000),
+            completedAt: Date(timeIntervalSince1970: 11_500)
+        )
+        let idleSession = PomodoroSession(state: .idle, templateID: template.id)
+
+        let completedTimer = PomodoroTimer(
+            selectedTemplate: template,
+            currentSession: completedSession,
+            clock: { clock.now }
+        )
+        let idleTimer = PomodoroTimer(
+            selectedTemplate: template,
+            currentSession: idleSession,
+            clock: { clock.now }
+        )
+
+        #expect(completedTimer.session == completedSession)
+        #expect(completedTimer.remainingSeconds == 0)
+        #expect(idleTimer.session == idleSession)
+        #expect(idleTimer.remainingSeconds == 1_500)
+    }
 }
 
 private final class ManualClock {

@@ -58,7 +58,7 @@ public enum PomodoroSessionState: String, Codable, Equatable, Sendable {
     case completed
 }
 
-public struct PomodoroSession: Equatable, Sendable {
+public struct PomodoroSession: Codable, Equatable, Sendable {
     public var state: PomodoroSessionState
     public var templateID: String?
     public var startedAt: Date?
@@ -92,11 +92,13 @@ public final class PomodoroTimer: ObservableObject {
 
     public init(
         selectedTemplate: PomodoroTemplate = .defaultFocus,
+        currentSession: PomodoroSession? = nil,
         clock: @escaping () -> Date = Date.init
     ) {
-        self.session = PomodoroSession(templateID: selectedTemplate.id)
         self.selectedTemplate = selectedTemplate
         self.clock = clock
+        self.session = currentSession ?? PomodoroSession(templateID: selectedTemplate.id)
+        refresh()
     }
 
     public var remainingSeconds: Int {

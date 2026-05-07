@@ -57,6 +57,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var isPomodoroCardVisible: Bool
     public var pomodoroTemplates: [PomodoroTemplate]
     public var selectedPomodoroTemplateID: String
+    public var currentPomodoroSession: PomodoroSession?
 
     private enum CodingKeys: String, CodingKey {
         case appearanceMode
@@ -66,6 +67,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         case isPomodoroCardVisible
         case pomodoroTemplates
         case selectedPomodoroTemplateID
+        case currentPomodoroSession
     }
 
     public init(
@@ -75,7 +77,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
         quickAddHotkey: HotkeyBinding = .default,
         isPomodoroCardVisible: Bool = true,
         pomodoroTemplates: [PomodoroTemplate] = PomodoroTemplate.defaultTemplates,
-        selectedPomodoroTemplateID: String = PomodoroTemplate.defaultFocus.id
+        selectedPomodoroTemplateID: String = PomodoroTemplate.defaultFocus.id,
+        currentPomodoroSession: PomodoroSession? = nil
     ) {
         self.appearanceMode = appearanceMode
         self.cardOrder = MenuCard.normalizedOrder(from: cardOrder)
@@ -87,6 +90,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
             selectedPomodoroTemplateID,
             templates: self.pomodoroTemplates
         )
+        self.currentPomodoroSession = currentPomodoroSession
     }
 
     public static let `default` = AppSettings()
@@ -108,6 +112,10 @@ public struct AppSettings: Codable, Equatable, Sendable {
             try container.decodeIfPresent(String.self, forKey: .selectedPomodoroTemplateID),
             templates: pomodoroTemplates
         )
+        currentPomodoroSession = try container.decodeIfPresent(
+            PomodoroSession.self,
+            forKey: .currentPomodoroSession
+        )
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -119,6 +127,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         try container.encode(isPomodoroCardVisible, forKey: .isPomodoroCardVisible)
         try container.encode(pomodoroTemplates, forKey: .pomodoroTemplates)
         try container.encode(selectedPomodoroTemplateID, forKey: .selectedPomodoroTemplateID)
+        try container.encodeIfPresent(currentPomodoroSession, forKey: .currentPomodoroSession)
     }
 
     private static func normalizedSelectedPomodoroTemplateID(

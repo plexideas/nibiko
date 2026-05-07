@@ -13,7 +13,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         scheduler: UserNotificationReminderScheduler()
     )
     private lazy var pomodoroTimer = PomodoroTimer(
-        selectedTemplate: selectedPomodoroTemplate(from: settingsStore.settings)
+        selectedTemplate: selectedPomodoroTemplate(from: settingsStore.settings),
+        currentSession: settingsStore.settings.currentPomodoroSession
     )
     private lazy var quickAddCaptureService = QuickAddCaptureService(
         recordListStore: recordListStore,
@@ -42,26 +43,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var appInfoWindowController: AppInfoWindowController?
     private var settingsSubscription: AnyCancellable?
     private var recordsSubscription: AnyCancellable?
+    private var pomodoroSessionSubscription: AnyCancellable?
+    private var lastPomodoroTemplates: [PomodoroTemplate] = []
+    private var lastSelectedPomodoroTemplateID: String?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         menuBarController.installStatusItem()
         applyAppearance(settingsStore.settings.appearanceMode)
         menuBarController.updateActiveCount(recordListStore.activeCount)
         hotkeyRegistrar.register(settingsStore.settings.quickAddHotkey)
+        lastPomodoroTemplates = settingsStore.settings.pomodoroTemplates
+        lastSelectedPomodoroTemplateID = settingsStore.settings.selectedPomodoroTemplateID
 
         settingsSubscription = settingsStore.$settings.sink { [weak self] settings in
             self?.applyAppearance(settings.appearanceMode)
             self?.recordListStore.setDirectory(self?.markdownStorageURL(from: settings))
             self?.hotkeyRegistrar.register(settings.quickAddHotkey)
-            self?.pomodoroTimer.resetTemplates(
-                settings.pomodoroTemplates,
-                selectedTemplateID: settings.selectedPomodoroTemplateID
-            )
+            self?.resetPomodoroTemplatesIfNeeded(from: settings)
         }
 
         recordsSubscription = recordListStore.$records.sink { [weak self] records in
             self?.menuBarController.updateActiveCount(ActiveRecordCounter.count(records))
         }
+
+        pomodoroSessionSubscription = pomodoroTimer.$session
+            .removeDuplicates()
+            .sink { [weak self] session in
+                guard self?.settingsStore.settings.currentPomodoroSession != session else {
+                    return
+                }
+                self?.settingsStore.setCurrentPomodoroSession(session)
+            }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -117,7 +129,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func selectedPomodoroTemplate(from settings: AppSettings) -> PomodoroTemplate {
-        settings.pomodoroTemplates.first { $0.id == settings.selectedPomodoroTemplateID }
+        let templateID = settings.currentPomodoroSession?.templateID ?? settings.selectedPomodoroTemplateID
+        return settings.pomodoroTemplates.first { $0.id == templateID }
             ?? settings.pomodoroTemplates[0]
+    }
+
+    private func resetPomodoroTemplatesIfNeeded(from settings: AppSettings) {
+        guard settings.pomodoroTemplates != lastPomodoroTemplates
+            || settings.selectedPomodoroTemplateID != lastSelectedPomodoroTemplateID
+        else {
+            return
+        }
+
+        lastPomodoroTemplates = settings.pomodoroTemplates
+        lastSelectedPomodoroTemplateID = settings.selectedPomodoroTemplateID
+        pomodoroTimer.resetTemplates(
+            settings.pomodoroTemplates,
+            selectedTemplateID: settings.selectedPomodoroTemplateID
+        )
     }
 }

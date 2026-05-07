@@ -16,6 +16,7 @@ struct AppSettingsStoreTests {
         #expect(store.settings.isPomodoroCardVisible)
         #expect(store.settings.pomodoroTemplates == PomodoroTemplate.defaultTemplates)
         #expect(store.settings.selectedPomodoroTemplateID == PomodoroTemplate.defaultFocus.id)
+        #expect(store.settings.currentPomodoroSession == nil)
     }
 
     @Test("appearance changes persist across store recreation")
@@ -97,6 +98,24 @@ struct AppSettingsStoreTests {
         #expect(reloadedStore.settings.selectedPomodoroTemplateID == template.id)
     }
 
+    @Test("current Pomodoro session persists across store recreation")
+    func persistsCurrentPomodoroSession() {
+        let defaults = isolatedDefaults()
+        let persistence = UserDefaultsSettingsPersistence(defaults: defaults)
+        let store = AppSettingsStore(persistence: persistence)
+        let session = PomodoroSession(
+            state: .paused,
+            templateID: PomodoroTemplate.defaultFocus.id,
+            startedAt: Date(timeIntervalSince1970: 10_000),
+            pausedRemainingSeconds: 900
+        )
+
+        store.setCurrentPomodoroSession(session)
+
+        let reloadedStore = AppSettingsStore(persistence: persistence)
+        #expect(reloadedStore.settings.currentPomodoroSession == session)
+    }
+
     @Test("removing the selected Pomodoro template selects a remaining template")
     func removingSelectedPomodoroTemplateSelectsRemainingTemplate() {
         let defaults = isolatedDefaults()
@@ -147,6 +166,7 @@ struct AppSettingsStoreTests {
         #expect(settings.isPomodoroCardVisible)
         #expect(settings.pomodoroTemplates == PomodoroTemplate.defaultTemplates)
         #expect(settings.selectedPomodoroTemplateID == PomodoroTemplate.defaultFocus.id)
+        #expect(settings.currentPomodoroSession == nil)
     }
 
     @Test("card order normalization preserves every Phase 1 card once")

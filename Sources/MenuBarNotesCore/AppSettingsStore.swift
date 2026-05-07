@@ -84,6 +84,12 @@ public final class AppSettingsStore: ObservableObject {
         }
     }
 
+    public func setCurrentPomodoroSession(_ session: PomodoroSession?) {
+        update { settings in
+            settings.currentPomodoroSession = session
+        }
+    }
+
     public func upsertPomodoroTemplate(_ template: PomodoroTemplate) {
         update { settings in
             let normalizedTemplate = PomodoroTemplate.normalizedTemplates([template])[0]
