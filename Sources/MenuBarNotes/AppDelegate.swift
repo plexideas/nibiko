@@ -49,6 +49,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var settingsSubscription: AnyCancellable?
     private var recordsSubscription: AnyCancellable?
     private var pomodoroSessionSubscription: AnyCancellable?
+    private var pomodoroTickSubscription: AnyCancellable?
     private var lastPomodoroTemplates: [PomodoroTemplate] = []
     private var lastSelectedPomodoroTemplateID: String?
 
@@ -56,6 +57,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menuBarController.installStatusItem()
         applyAppearance(settingsStore.settings.appearanceMode)
         menuBarController.updateActiveCount(recordListStore.activeCount)
+        updatePomodoroStatusItem()
         hotkeyRegistrar.register(settingsStore.settings.quickAddHotkey)
         settingsStore.applyLaunchAtLoginPreference()
         refreshCalendarIfVisible(settingsStore.settings)
@@ -81,10 +83,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         pomodoroSessionSubscription = pomodoroTimer.$session
             .removeDuplicates()
             .sink { [weak self] session in
-                guard self?.settingsStore.settings.currentPomodoroSession != session else {
+                guard let self else {
                     return
                 }
-                self?.settingsStore.setCurrentPomodoroSession(session)
+
+                if self.settingsStore.settings.currentPomodoroSession != session {
+                    self.settingsStore.setCurrentPomodoroSession(session)
+                }
+                self.updatePomodoroStatusItem(session: session)
             }
     }
 
@@ -163,6 +169,63 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             settings.pomodoroTemplates,
             selectedTemplateID: settings.selectedPomodoroTemplateID
         )
+        updatePomodoroStatusItem()
+    }
+
+    private func updatePomodoroStatusItem(session: PomodoroSession? = nil) {
+        let statusSession = session ?? pomodoroTimer.session
+        let template = pomodoroTemplate(for: statusSession)
+        menuBarController.updatePomodoroStatus(
+            state: statusSession.state,
+            remainingSeconds: pomodoroRemainingSeconds(for: statusSession, template: template),
+            totalSeconds: template.focusDurationSeconds
+        )
+        updatePomodoroTickSubscription(state: statusSession.state)
+    }
+
+    private func updatePomodoroTickSubscription(state: PomodoroSessionState? = nil) {
+        guard (state ?? pomodoroTimer.session.state) == .running else {
+            pomodoroTickSubscription?.cancel()
+            pomodoroTickSubscription = nil
+            return
+        }
+
+        guard pomodoroTickSubscription == nil else {
+            return
+        }
+
+        pomodoroTickSubscription = Timer.publish(every: 1, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in
+                guard let self else {
+                    return
+                }
+
+                self.pomodoroTimer.tick()
+                self.updatePomodoroStatusItem()
+            }
+    }
+
+    private func pomodoroTemplate(for session: PomodoroSession) -> PomodoroTemplate {
+        let templateID = session.templateID ?? settingsStore.settings.selectedPomodoroTemplateID
+        return settingsStore.settings.pomodoroTemplates.first { $0.id == templateID }
+            ?? pomodoroTimer.selectedTemplate
+    }
+
+    private func pomodoroRemainingSeconds(for session: PomodoroSession, template: PomodoroTemplate) -> Int {
+        switch session.state {
+        case .idle:
+            return template.focusDurationSeconds
+        case .running:
+            guard let endsAt = session.endsAt else {
+                return template.focusDurationSeconds
+            }
+            return max(0, Int(ceil(endsAt.timeIntervalSince(Date()))))
+        case .paused:
+            return max(0, session.pausedRemainingSeconds ?? template.focusDurationSeconds)
+        case .completed:
+            return 0
+        }
     }
 
     private func refreshCalendarIfVisible(_ settings: AppSettings) {
