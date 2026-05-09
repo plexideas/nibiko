@@ -54,6 +54,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var lastSelectedPomodoroTemplateID: String?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        ApplicationCommandMenu.install(appName: localizer.string(.appName))
         menuBarController.installStatusItem()
         applyAppearance(settingsStore.settings.appearanceMode)
         menuBarController.updateActiveCount(recordListStore.activeCount)
