@@ -1,0 +1,173 @@
+import Combine
+import Darwin
+import Foundation
+
+@MainActor
+public final class RecordListStore: ObservableObject {
+    @Published public private(set) var records: [Record] = []
+    @Published public private(set) var lastErrorDescription: String?
+
+    public var activeCount: Int {
+        ActiveRecordCounter.count(records)
+    }
+
+    public var hasStorageDirectory: Bool {
+        directory != nil
+    }
+
+    private var storage: MarkdownRecordsStore
+    private let watchesDirectoryChanges: Bool
+    private let watchQueue = DispatchQueue(label: "Nibiko.RecordListStore.watch")
+    private var directory: URL?
+    private var watcher: DispatchSourceFileSystemObject?
+
+    public init(
+        directory: URL? = nil,
+        storage: MarkdownRecordsStore = MarkdownRecordsStore(),
+        watchesDirectoryChanges: Bool = true
+    ) {
+        self.storage = storage
+        self.watchesDirectoryChanges = watchesDirectoryChanges
+        setDirectory(directory)
+    }
+
+    deinit {
+        watcher?.cancel()
+    }
+
+    public func setDirectory(_ directory: URL?) {
+        guard self.directory != directory else {
+            return
+        }
+
+        self.directory = directory
+        reload()
+        startWatchingDirectory()
+    }
+
+    public func setStorageLocation(directory: URL?, recordsFileName: String) {
+        setStorageLocation(directory: directory)
+    }
+
+    public func setStorageLocation(directory: URL?) {
+        let nextStorage = MarkdownRecordsStore()
+        guard self.directory != directory || self.storage != nextStorage else {
+            return
+        }
+
+        self.storage = nextStorage
+        self.directory = directory
+        reload()
+        startWatchingDirectory()
+    }
+
+    @discardableResult
+    public func addNote(title: String) throws -> Record {
+        try addRecord(RecordDraft(kind: .note, title: title))
+    }
+
+    @discardableResult
+    public func addTodo(title: String) throws -> Record {
+        try addRecord(RecordDraft(kind: .todo, title: title))
+    }
+
+    @discardableResult
+    public func addReminder(title: String, dueAt: Date? = nil, reminderAt: Date? = nil) throws -> Record {
+        try addRecord(RecordDraft(kind: .reminder, title: title, dueAt: dueAt, reminderAt: reminderAt))
+    }
+
+    @discardableResult
+    public func addDraft(_ draft: RecordDraft) throws -> Record {
+        try addRecord(draft)
+    }
+
+    public func completeRecord(id: String) throws {
+        guard let directory else {
+            throw RecordListStoreError.missingStorageDirectory
+        }
+
+        try storage.completeRecord(id: id, in: directory)
+        reload()
+    }
+
+    public func completeTodo(id: String) throws {
+        try completeRecord(id: id)
+    }
+
+    public func deleteRecord(id: String) throws {
+        guard let directory else {
+            throw RecordListStoreError.missingStorageDirectory
+        }
+
+        try storage.deleteRecord(id: id, in: directory)
+        reload()
+    }
+
+    public func reload() {
+        guard let directory else {
+            records = []
+            lastErrorDescription = nil
+            return
+        }
+
+        do {
+            records = try storage.loadRecords(in: directory)
+            lastErrorDescription = nil
+        } catch {
+            lastErrorDescription = error.localizedDescription
+        }
+    }
+
+    private func addRecord(_ draft: RecordDraft) throws -> Record {
+        guard let directory else {
+            throw RecordListStoreError.missingStorageDirectory
+        }
+
+        let record = try storage.addRecord(draft, in: directory)
+        reload()
+        return record
+    }
+
+    private func startWatchingDirectory() {
+        watcher?.cancel()
+        watcher = nil
+
+        guard watchesDirectoryChanges, let directory else {
+            return
+        }
+
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let descriptor = open(directory.path, O_EVTONLY)
+        guard descriptor >= 0 else {
+            return
+        }
+
+        let source = DispatchSource.makeFileSystemObjectSource(
+            fileDescriptor: descriptor,
+            eventMask: [.write, .delete, .rename, .attrib, .extend],
+            queue: watchQueue
+        )
+        source.setEventHandler(handler: Self.directoryEventHandler(for: self))
+        source.setCancelHandler(handler: Self.directoryCancelHandler(for: descriptor))
+        watcher = source
+        source.resume()
+    }
+
+    nonisolated private static func directoryEventHandler(for store: RecordListStore) -> @Sendable () -> Void {
+        { [weak store] in
+            Task { @MainActor in
+                store?.reload()
+            }
+        }
+    }
+
+    nonisolated private static func directoryCancelHandler(for descriptor: Int32) -> @Sendable () -> Void {
+        {
+            close(descriptor)
+        }
+    }
+}
+
+public enum RecordListStoreError: Error, Equatable, Sendable {
+    case missingStorageDirectory
+}

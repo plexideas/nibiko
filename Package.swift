@@ -3,26 +3,26 @@
 import PackageDescription
 
 let package = Package(
-    name: "MenuBarNotes",
+    name: "Nibiko",
     defaultLocalization: "en",
     platforms: [
         .macOS(.v14)
     ],
     products: [
-        .executable(name: "MenuBarNotes", targets: ["MenuBarNotes"]),
-        .library(name: "MenuBarNotesCore", targets: ["MenuBarNotesCore"])
+        .executable(name: "Nibiko", targets: ["Nibiko"]),
+        .library(name: "NibikoCore", targets: ["NibikoCore"])
     ],
     targets: [
         .target(
-            name: "MenuBarNotesCore"
+            name: "NibikoCore"
         ),
         .executableTarget(
-            name: "MenuBarNotes",
-            dependencies: ["MenuBarNotesCore"]
+            name: "Nibiko",
+            dependencies: ["NibikoCore"]
         ),
         .testTarget(
-            name: "MenuBarNotesCoreTests",
-            dependencies: ["MenuBarNotesCore"]
+            name: "NibikoCoreTests",
+            dependencies: ["NibikoCore"]
         )
     ]
 )

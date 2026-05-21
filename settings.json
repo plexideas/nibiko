@@ -1,0 +1,26 @@
+{
+  "pomodoro" : {
+    "currentPomodoroSession" : {
+      "state" : "idle",
+      "templateID" : "default-focus"
+    },
+    "isPomodoroCardVisible" : true,
+    "pomodoroTemplates" : [
+      {
+        "cycleCount" : 4,
+        "focusDurationSeconds" : 1500,
+        "id" : "default-focus",
+        "longBreakDurationSeconds" : 900,
+        "name" : "Focus 25",
+        "shortBreakDurationSeconds" : 300
+      },
+      {
+        "focusDurationSeconds" : 900,
+        "id" : "short-focus",
+        "name" : "Quick Focus",
+        "shortBreakDurationSeconds" : 300
+      }
+    ],
+    "selectedPomodoroTemplateID" : "default-focus"
+  }
+}
