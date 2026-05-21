@@ -1,5 +1,9 @@
 # Nibiko
 
+<p align="center">
+  <img src="Packaging/Nibiko/AppIcon.png" alt="Nibiko app icon" width="160">
+</p>
+
 Nibiko is a small macOS menu bar app for quick notes, todos, reminders, focus sessions, and calendar-aware planning.
 
 The app lives in the menu bar, keeps notes in a local Markdown vault, and provides a quick-add panel for capturing work without opening a full window.
@@ -48,6 +52,10 @@ Run with process verification:
 ```
 
 ## Package a DMG
+
+Download the latest public DMG from GitHub Releases:
+
+<https://github.com/plexideas/nibiko/releases/latest>
 
 Build a release app bundle and DMG:
 
