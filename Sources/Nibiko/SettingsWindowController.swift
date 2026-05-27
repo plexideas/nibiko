@@ -243,7 +243,7 @@ private struct NotesTodosSettingsView: View {
         )
 
         if panel.runModal() == .OK, let url = panel.url {
-            settingsStore.setVaultStorageDirectory(url.path)
+            settingsStore.setVaultStorageDirectory(url)
         }
     }
 
@@ -266,8 +266,10 @@ private struct NotesTodosSettingsView: View {
         let vaultURL = URL(fileURLWithPath: draftVaultLocation, isDirectory: true)
             .appendingPathComponent(vaultName, isDirectory: true)
         try? FileManager.default.createDirectory(at: vaultURL, withIntermediateDirectories: true)
-        settingsStore.setVaultName(vaultName)
-        settingsStore.setVaultStorageDirectory(draftVaultLocation)
+        settingsStore.setVault(
+            name: vaultName,
+            storageDirectory: URL(fileURLWithPath: draftVaultLocation, isDirectory: true)
+        )
         vaultMode = .choose
     }
 

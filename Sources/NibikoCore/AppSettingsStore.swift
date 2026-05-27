@@ -55,6 +55,7 @@ public final class AppSettingsStore: ObservableObject {
     private let usesVaultSettings: Bool
     private let launchAtLoginService: (any LaunchAtLoginServicing)?
     private let errorHandler: @MainActor (Error) -> Void
+    private var vaultStorageAccess: SecurityScopedResourceAccess?
 
     public init(
         persistence: SettingsPersistence = UserDefaultsSettingsPersistence(),
@@ -71,8 +72,17 @@ public final class AppSettingsStore: ObservableObject {
 
         do {
             var loadedSettings = try persistence.loadSettings() ?? .default
+            self.vaultStorageAccess = try Self.securityScopedAccess(from: loadedSettings)
+            if let resolvedStorageURL = vaultStorageAccess?.url,
+               resolvedStorageURL.path != loadedSettings.vaultStorageDirectory {
+                loadedSettings.vaultStorageDirectory = AppSettings.normalizedVaultStorageDirectory(
+                    resolvedStorageURL.path
+                )
+            }
             if usesVaultSettings,
-               let vaultSettings = try vaultSettingsStore.loadSettings(in: Self.vaultURL(from: loadedSettings)) {
+               let vaultSettings = try vaultSettingsStore.loadSettings(
+                   in: Self.vaultURL(from: loadedSettings, storageURL: vaultStorageAccess?.url)
+               ) {
                 loadedSettings.apply(vaultSettings.pomodoro)
             }
             self.settings = loadedSettings
@@ -82,6 +92,10 @@ public final class AppSettingsStore: ObservableObject {
         }
     }
 
+    public var vaultDirectoryURL: URL {
+        Self.vaultURL(from: settings, storageURL: vaultStorageAccess?.url)
+    }
+
     public func setAppearanceMode(_ appearanceMode: AppearanceMode) {
         update { settings in
             settings.appearanceMode = appearanceMode
@@ -89,12 +103,38 @@ public final class AppSettingsStore: ObservableObject {
     }
 
     public func setMarkdownStorageDirectory(_ directory: String?) {
-        setVaultStorageDirectory(directory)
+        update { settings in
+            let normalizedDirectory = AppSettings.normalizedMarkdownStorageDirectory(directory)
+            let directoryURL = URL(fileURLWithPath: normalizedDirectory, isDirectory: true)
+            settings.vaultName = AppSettings.normalizedVaultName(directoryURL.lastPathComponent)
+            settings.vaultStorageDirectory = AppSettings.normalizedVaultStorageDirectory(
+                directoryURL.deletingLastPathComponent().path
+            )
+            settings.vaultStorageBookmarkData = nil
+        }
     }
 
     public func setVaultStorageDirectory(_ directory: String?) {
         update { settings in
             settings.vaultStorageDirectory = AppSettings.normalizedVaultStorageDirectory(directory)
+            settings.vaultStorageBookmarkData = nil
+        }
+    }
+
+    public func setVaultStorageDirectory(_ directoryURL: URL) {
+        let bookmarkData = securityScopedBookmarkData(for: directoryURL)
+        update { settings in
+            settings.vaultStorageDirectory = AppSettings.normalizedVaultStorageDirectory(directoryURL.path)
+            settings.vaultStorageBookmarkData = bookmarkData
+        }
+    }
+
+    public func setVault(name: String?, storageDirectory directoryURL: URL) {
+        let bookmarkData = securityScopedBookmarkData(for: directoryURL)
+        update { settings in
+            settings.vaultName = AppSettings.normalizedVaultName(name)
+            settings.vaultStorageDirectory = AppSettings.normalizedVaultStorageDirectory(directoryURL.path)
+            settings.vaultStorageBookmarkData = bookmarkData
         }
     }
 
@@ -234,16 +274,66 @@ public final class AppSettingsStore: ObservableObject {
 
         do {
             try persistence.saveSettings(nextSettings)
+            vaultStorageAccess = try Self.securityScopedAccess(from: nextSettings)
             if usesVaultSettings {
-                try vaultSettingsStore.saveSettings(nextSettings.vaultSettings, in: Self.vaultURL(from: nextSettings))
+                try vaultSettingsStore.saveSettings(
+                    nextSettings.vaultSettings,
+                    in: Self.vaultURL(from: nextSettings, storageURL: vaultStorageAccess?.url)
+                )
             }
         } catch {
             errorHandler(error)
         }
     }
 
-    private static func vaultURL(from settings: AppSettings) -> URL {
-        URL(fileURLWithPath: settings.vaultDirectory, isDirectory: true)
+    private func securityScopedBookmarkData(for directoryURL: URL) -> Data? {
+        do {
+            return try directoryURL.bookmarkData(
+                options: [.withSecurityScope],
+                includingResourceValuesForKeys: nil,
+                relativeTo: nil
+            )
+        } catch {
+            errorHandler(error)
+            return nil
+        }
+    }
+
+    private static func securityScopedAccess(from settings: AppSettings) throws -> SecurityScopedResourceAccess? {
+        guard let bookmarkData = settings.vaultStorageBookmarkData else {
+            return nil
+        }
+
+        var isStale = false
+        let url = try URL(
+            resolvingBookmarkData: bookmarkData,
+            options: [.withSecurityScope],
+            relativeTo: nil,
+            bookmarkDataIsStale: &isStale
+        )
+
+        return SecurityScopedResourceAccess(url: url)
+    }
+
+    private static func vaultURL(from settings: AppSettings, storageURL: URL?) -> URL {
+        let resolvedStorageURL = storageURL ?? URL(fileURLWithPath: settings.vaultStorageDirectory, isDirectory: true)
+        return resolvedStorageURL.appendingPathComponent(settings.vaultName, isDirectory: true)
+    }
+}
+
+private final class SecurityScopedResourceAccess {
+    let url: URL
+    private let didStartAccessing: Bool
+
+    init(url: URL) {
+        self.url = url
+        didStartAccessing = url.startAccessingSecurityScopedResource()
+    }
+
+    deinit {
+        if didStartAccessing {
+            url.stopAccessingSecurityScopedResource()
+        }
     }
 }
 

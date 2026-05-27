@@ -91,6 +91,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var cardOrder: [MenuCard]
     public var vaultName: String
     public var vaultStorageDirectory: String
+    public var vaultStorageBookmarkData: Data?
     public var quickAddHotkey: HotkeyBinding
     public var isPomodoroCardVisible: Bool
     public var pomodoroTemplates: [PomodoroTemplate]
@@ -114,6 +115,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         case cardOrder
         case vaultName
         case vaultStorageDirectory
+        case vaultStorageBookmarkData
         case markdownStorageDirectory
         case markdownStorageFileName
         case quickAddHotkey
@@ -146,6 +148,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         self.cardOrder = MenuCard.normalizedOrder(from: cardOrder)
         self.vaultName = Self.normalizedVaultName(vaultName)
         self.vaultStorageDirectory = Self.normalizedVaultStorageDirectory(vaultStorageDirectory)
+        self.vaultStorageBookmarkData = nil
         self.quickAddHotkey = quickAddHotkey
         self.isPomodoroCardVisible = isPomodoroCardVisible
         self.pomodoroTemplates = PomodoroTemplate.normalizedTemplates(pomodoroTemplates)
@@ -173,13 +176,16 @@ public struct AppSettings: Codable, Equatable, Sendable {
             vaultStorageDirectory = Self.normalizedVaultStorageDirectory(
                 try container.decodeIfPresent(String.self, forKey: .vaultStorageDirectory)
             )
+            vaultStorageBookmarkData = try container.decodeIfPresent(Data.self, forKey: .vaultStorageBookmarkData)
         } else if let legacyDirectory = try container.decodeIfPresent(String.self, forKey: .markdownStorageDirectory) {
             let legacyURL = URL(fileURLWithPath: legacyDirectory, isDirectory: true)
             vaultName = Self.normalizedVaultName(legacyURL.lastPathComponent)
             vaultStorageDirectory = Self.normalizedVaultStorageDirectory(legacyURL.deletingLastPathComponent().path)
+            vaultStorageBookmarkData = nil
         } else {
             vaultName = Self.defaultVaultName
             vaultStorageDirectory = Self.defaultVaultStorageDirectory
+            vaultStorageBookmarkData = nil
         }
         quickAddHotkey = try container.decodeIfPresent(HotkeyBinding.self, forKey: .quickAddHotkey) ?? .default
         isPomodoroCardVisible = try container.decodeIfPresent(Bool.self, forKey: .isPomodoroCardVisible) ?? true
@@ -209,6 +215,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         try container.encode(cardOrder, forKey: .cardOrder)
         try container.encode(vaultName, forKey: .vaultName)
         try container.encode(vaultStorageDirectory, forKey: .vaultStorageDirectory)
+        try container.encodeIfPresent(vaultStorageBookmarkData, forKey: .vaultStorageBookmarkData)
         try container.encode(quickAddHotkey, forKey: .quickAddHotkey)
         try container.encode(isPomodoroCardVisible, forKey: .isPomodoroCardVisible)
         try container.encode(pomodoroTemplates, forKey: .pomodoroTemplates)
@@ -247,7 +254,12 @@ public struct AppSettings: Codable, Equatable, Sendable {
     }
 
     public static func normalizedMarkdownStorageDirectory(_ directory: String?) -> String {
-        normalizedVaultStorageDirectory(directory)
+        let trimmedDirectory = directory?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let trimmedDirectory, !trimmedDirectory.isEmpty {
+            return trimmedDirectory
+        }
+
+        return defaultMarkdownStorageDirectory
     }
 
     public static func normalizedVaultName(_ name: String?) -> String {

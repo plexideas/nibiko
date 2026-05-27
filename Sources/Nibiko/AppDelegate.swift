@@ -16,7 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     )
     private lazy var recordListStore = RecordListStore(
-        directory: vaultURL(from: settingsStore.settings),
+        directory: settingsStore.vaultDirectoryURL,
         storage: MarkdownRecordsStore()
     )
     private lazy var reminderNotificationStore = ReminderNotificationStore(
@@ -94,7 +94,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         settingsSubscription = settingsStore.$settings.sink { [weak self] settings in
             self?.applyAppearance(settings.appearanceMode)
-            self?.recordListStore.setStorageLocation(directory: self?.vaultURL(from: settings))
+            self?.recordListStore.setStorageLocation(directory: self?.settingsStore.vaultDirectoryURL)
             self?.hotkeyRegistrar.register(settings.quickAddHotkey)
             self?.resetPomodoroTemplatesIfNeeded(from: settings)
             self?.refreshCalendarIfVisible(settings)
@@ -179,10 +179,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menuBarController.applyAppearance(mode)
         settingsWindowController?.applyAppearance(mode)
         quickAddPanelController.applyAppearance(mode)
-    }
-
-    private func vaultURL(from settings: AppSettings) -> URL? {
-        URL(fileURLWithPath: settings.vaultDirectory, isDirectory: true)
     }
 
     private func selectedPomodoroTemplate(from settings: AppSettings) -> PomodoroTemplate {
